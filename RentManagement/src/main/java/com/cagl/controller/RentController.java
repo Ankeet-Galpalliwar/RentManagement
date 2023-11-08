@@ -116,8 +116,11 @@ public class RentController {
 						.amContactNumber(rfBranchMaster.getAmContactNumber()).areaName(rfBranchMaster.getAreaName())
 						.branchName(rfBranchMaster.getBranchName()).region(rfBranchMaster.getRegion())
 						.rfBranchID(rfBranchMaster.getRfBranchID()).build();
-				return ResponseEntity.status(HttpStatus.OK)
-						.body(Responce.builder().error(Boolean.FALSE).data(build).msg("Data present..!").build());
+				return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
+						.data(RfBranchmasterDto.builder().amContactNumber(rfBranchMaster.getAmContactNumber())
+								.areaName(rfBranchMaster.getAreaName()).branchName(rfBranchMaster.getBranchName())
+								.region(rfBranchMaster.getRegion()).rfBranchID(rfBranchMaster.getRfBranchID()).build())
+						.msg("Data present..!").build());
 			}
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(Responce.builder().error(Boolean.TRUE).data(null).msg("Data Not Present..!").build());
