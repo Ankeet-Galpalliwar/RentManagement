@@ -117,9 +117,7 @@ public class RentController {
 						.branchName(rfBranchMaster.getBranchName()).region(rfBranchMaster.getRegion())
 						.rfBranchID(rfBranchMaster.getRfBranchID()).build();
 				return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
-						.data(RfBranchmasterDto.builder().amContactNumber(rfBranchMaster.getAmContactNumber())
-								.areaName(rfBranchMaster.getAreaName()).branchName(rfBranchMaster.getBranchName())
-								.region(rfBranchMaster.getRegion()).rfBranchID(rfBranchMaster.getRfBranchID()).build())
+						.data(build)
 						.msg("Data present..!").build());
 			}
 			return ResponseEntity.status(HttpStatus.OK)
