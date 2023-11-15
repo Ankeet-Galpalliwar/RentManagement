@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
@@ -98,10 +99,11 @@ public class RentController {
 	@GetMapping("getbranchids")
 	public List<String> getBranchIDs(@RequestParam String type) {
 		if (type.toUpperCase().startsWith("RF")) {
-			return rfBrachRepository.findAll().stream().map(data -> data.getRfBranchID()).distinct()
-					.collect(Collectors.toList());
+			return rentContractRepository.getbranchIDs(type).stream().distinct().collect(Collectors.toList());
+		} else if (type.toUpperCase().startsWith("GL")) {
+			return rentContractRepository.getbranchIDs(type).stream().distinct().collect(Collectors.toList());
 		} else {
-			return branchDetailRepository.getbranchIDs().stream().distinct().collect(Collectors.toList());
+			return null;
 		}
 	}
 
@@ -121,7 +123,7 @@ public class RentController {
 			}
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(Responce.builder().error(Boolean.TRUE).data(null).msg("Data Not Present..!").build());
-		} else {
+		} else if(type.toUpperCase().startsWith("GL")){
 			Optional<BranchDetail> data = branchDetailRepository.findById(BranchID);
 			if (data.isPresent()) {
 				BranchDetail branchDetail = data.get();
@@ -134,6 +136,8 @@ public class RentController {
 			}
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(Responce.builder().data(null).msg("Branch Data Not Exist...!").error(Boolean.FALSE).build());
+		}else {
+			return null;
 		}
 	}
 
