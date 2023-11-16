@@ -99,11 +99,11 @@ public class RentController {
 	@GetMapping("getbranchids")
 	public List<String> getBranchIDs(@RequestParam String type) {
 		if (type.toUpperCase().startsWith("RF")) {
-			return rentContractRepository.getbranchIDs(type).stream().distinct().collect(Collectors.toList());
+			return rentContractRepository.getbranchIDs("RF").stream().distinct().collect(Collectors.toList());
 		} else if (type.toUpperCase().startsWith("GL")) {
-			return rentContractRepository.getbranchIDs(type).stream().distinct().collect(Collectors.toList());
+			return rentContractRepository.getbranchIDs("GL").stream().distinct().collect(Collectors.toList());
 		} else {
-			return null;
+			return new ArrayList<>();
 		}
 	}
 
@@ -122,8 +122,8 @@ public class RentController {
 						.body(Responce.builder().error(Boolean.FALSE).data(build).msg("Data present..!").build());
 			}
 			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().error(Boolean.TRUE).data(null).msg("Data Not Present..!").build());
-		} else if(type.toUpperCase().startsWith("GL")){
+					.body(Responce.builder().error(Boolean.TRUE).data(null).msg("RF Data Not Present..!").build());
+		} else if (type.toUpperCase().startsWith("GL")) {
 			Optional<BranchDetail> data = branchDetailRepository.findById(BranchID);
 			if (data.isPresent()) {
 				BranchDetail branchDetail = data.get();
@@ -134,10 +134,11 @@ public class RentController {
 				return ResponseEntity.status(HttpStatus.OK)
 						.body(Responce.builder().data(build).msg("Branch Data Exist...!").error(Boolean.FALSE).build());
 			}
-			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().data(null).msg("Branch Data Not Exist...!").error(Boolean.FALSE).build());
-		}else {
-			return null;
+			return ResponseEntity.status(HttpStatus.OK).body(
+					Responce.builder().data(null).msg("GL Branch Data Not Exist...!").error(Boolean.TRUE).build());
+		} else {
+			return ResponseEntity.status(HttpStatus.OK).body(
+					Responce.builder().data(new ArrayList<>()).msg("Data Not Exist...!").error(Boolean.TRUE).build());
 		}
 	}
 
