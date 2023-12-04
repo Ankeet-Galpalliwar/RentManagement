@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
@@ -140,6 +139,7 @@ public class RentController {
 			return ResponseEntity.status(HttpStatus.OK).body(
 					Responce.builder().data(new ArrayList<>()).msg("Data Not Exist...!").error(Boolean.TRUE).build());
 		}
+
 	}
 
 	@GetMapping("/getallcontracts")
@@ -204,15 +204,23 @@ public class RentController {
 								.distinct().collect(Collectors.toList()))
 						.error(Boolean.FALSE).msg("Get All State").build());
 	}
-
+	
+	
 	@GetMapping("getdistrict")
 	public ResponseEntity<Responce> getDistrictBaseonState(@RequestParam String state) {
-		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentContractRepository.findAll()
-				.stream()
-				.filter(e -> e.getLesseeState().trim().toUpperCase().equalsIgnoreCase(state.trim().toUpperCase()))
-				.map(data -> data.getPremesisDistrict()).distinct().collect(Collectors.toList())).error(Boolean.FALSE)
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentContractRepository.getdistrict(state)
+				.stream().distinct().collect(Collectors.toList())).error(Boolean.FALSE)
 				.msg("Get District").build());
 	}
+
+//	@GetMapping("getdistrict")
+//	public ResponseEntity<Responce> getDistrictBaseonState(@RequestParam String state) {
+//		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentContractRepository.findAll()
+//				.stream()
+//				.filter(e -> e.getLesseeState().toUpperCase().equalsIgnoreCase(state.toUpperCase()))
+//				.map(data -> data.getPremesisDistrict()).distinct().collect(Collectors.toList())).error(Boolean.FALSE)
+//				.msg("Get District").build());
+//	}
 
 	@GetMapping("filterBranchIDs")
 	public ResponseEntity<Responce> getBranchIdsforFilter() {
