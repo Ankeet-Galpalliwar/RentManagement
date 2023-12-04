@@ -1,7 +1,5 @@
 package com.cagl.controller;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -60,34 +58,39 @@ public class RentController {
 	@PostMapping("/insertcontract")
 	public ResponseEntity<Responce> insertRentContract(@RequestBody RentContractDto rentContractDto) {
 		RentContract rentContract = new RentContract();
-		// ID Creation Logic
-//		String ID = rentContractDto.getBranchID() + "_"
-//				+ DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now());
 
 		BeanUtils.copyProperties(rentContractDto, rentContract);
-		rentContract.setUniqueID(
-				rentContractDto.getBranchID() + DateTimeFormatter.ofPattern("MMddHH:MM").format(LocalDateTime.now()));
+		// rentContract.setUniqueID(rentContractDto.getBranchID() +
+		// DateTimeFormatter.ofPattern("MMddHH:MM").format(LocalDateTime.now()));
+		List<Integer> ids = rentContractRepository.getids().stream().map(e -> Integer.parseInt(e)).sorted()
+				.collect(Collectors.toList());
+		rentContract.setUniqueID((ids.get(ids.size() - 1) + 1) + ""); // Input value type is String.
+
 		RentContract save = rentContractRepository.save(rentContract);
 
 		rentContractDto.getRecipiants().stream().forEach(data -> {
-			String recipantID = rentContractDto.getBranchID() + "-R";
-			List<String> recipiantID = recipiantRepository.getRecipiantID();
-			if (!recipiantID.isEmpty()) {
-				List<String> collect = recipiantID.stream().filter(e -> e.contains(rentContractDto.getBranchID()))
-						.map(e -> e.substring(e.indexOf("-") + 2)).sorted().collect(Collectors.toList());
-				if (collect.isEmpty()) {
-					recipantID += "1";
-				} else {
-					int count = Integer.parseInt(collect.get(collect.size() - 1)) + 1;
-					recipantID += "" + count;
-				}
-			} else {
-				recipantID += "1";
-			}
-			Recipiant build = Recipiant.builder().recipiantsID(recipantID).lessorBankName(data.getLessorBankName())
-					.lessorRecipiantsName(data.getLessorRecipiantsName()).rentContractRecipiant(save)
-					.lessorAccountNumber(data.getLessorAccountNumber()).lessorBranchName(data.getLessorBranchName())
-					.lessorIfscNumber(data.getLessorIfscNumber()).build();
+//			String recipantID = rentContractDto.getBranchID() + "-R";
+//			List<String> recipiantID = recipiantRepository.getRecipiantID();
+//			if (!recipiantID.isEmpty()) {
+//				List<String> collect = recipiantID.stream().filter(e -> e.contains(rentContractDto.getBranchID()))
+//						.map(e -> e.substring(e.indexOf("-") + 2)).sorted().collect(Collectors.toList());
+//				if (collect.isEmpty()) {
+//					recipantID += "1";
+//				} else {
+//					int count = Integer.parseInt(collect.get(collect.size() - 1)) + 1;
+//					recipantID += "" + count;
+//				}
+//			} else {
+//				recipantID += "1";
+//			}
+
+			List<Integer> recipiantIDs = recipiantRepository.getRecipiantIDs().stream().map(e -> Integer.parseInt(e))
+					.sorted().collect(Collectors.toList());
+
+			Recipiant build = Recipiant.builder().recipiantsID((recipiantIDs.get(recipiantIDs.size() - 1) + 1) + "")
+					.lessorBankName(data.getLessorBankName()).lessorRecipiantsName(data.getLessorRecipiantsName())
+					.rentContractRecipiant(save).lessorAccountNumber(data.getLessorAccountNumber())
+					.lessorBranchName(data.getLessorBranchName()).lessorIfscNumber(data.getLessorIfscNumber()).build();
 			recipiantRepository.save(build);
 		});
 
@@ -204,13 +207,12 @@ public class RentController {
 								.distinct().collect(Collectors.toList()))
 						.error(Boolean.FALSE).msg("Get All State").build());
 	}
-	
-	
+
 	@GetMapping("getdistrict")
 	public ResponseEntity<Responce> getDistrictBaseonState(@RequestParam String state) {
-		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentContractRepository.getdistrict(state)
-				.stream().distinct().collect(Collectors.toList())).error(Boolean.FALSE)
-				.msg("Get District").build());
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder()
+				.data(rentContractRepository.getdistrict(state).stream().distinct().collect(Collectors.toList()))
+				.error(Boolean.FALSE).msg("Get District").build());
 	}
 
 //	@GetMapping("getdistrict")

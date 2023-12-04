@@ -19,5 +19,10 @@ public interface RentContractRepository extends JpaRepository<RentContract, Stri
 	List<String> getdistrict(@Param("state") String state);
 
 	List<RentContract> findByBranchID(String branchID);
+	
+	
+	@Query(value = "Select uniqueid from rentmanagement.rent_contract", nativeQuery =true)
+	List<String> getids();
+	
 
 }

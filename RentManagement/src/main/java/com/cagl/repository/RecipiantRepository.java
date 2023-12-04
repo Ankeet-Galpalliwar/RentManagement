@@ -12,6 +12,6 @@ import com.cagl.entity.Recipiant;
 public interface RecipiantRepository extends JpaRepository<Recipiant, String> {
 
 	@Query(value = "SELECT recipiantsid FROM rentmanagement.recipiant", nativeQuery = true)
-	List<String> getRecipiantID();
+	List<String> getRecipiantIDs();
 
 }
