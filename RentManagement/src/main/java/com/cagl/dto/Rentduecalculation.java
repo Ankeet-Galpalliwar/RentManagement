@@ -18,6 +18,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class Rentduecalculation {
 	private String branchID;
+	private String contractID;
 	private String lesseeBranchType;
 	private LocalDate rentStartDate;
 	private LocalDate rentEndDate;

@@ -1,7 +1,6 @@
 package com.cagl.entity;
 
 import java.time.LocalDate;
-import java.util.List;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -25,6 +24,7 @@ public class RentDue {
 
 	@Id
 	private String rentDueID;
+	private String ContractID;
 	private double january;
 	private double february;
 	private double march;

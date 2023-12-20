@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -36,6 +37,7 @@ import com.cagl.repository.RecipiantRepository;
 import com.cagl.repository.RentContractRepository;
 import com.cagl.repository.RfBrachRepository;
 import com.cagl.repository.ifscMasterRepository;
+import com.cagl.repository.rentDueRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -59,6 +61,20 @@ public class RentController {
 	@Autowired
 	ifscMasterRepository ifscMasterRepository;
 
+	@Autowired
+	rentDueRepository dueRepository;
+
+	@GetMapping("getduereport")
+	public ResponseEntity<Responce> getDueReport(@RequestParam String value) {
+		List<RentDue> getrentdue = dueRepository.getrentdue(value);
+		return ResponseEntity
+				.status(HttpStatus.OK).body(
+						Responce.builder()
+								.data(getrentdue.stream().sorted(Comparator.comparing(RentDue::getRentDueID))
+										.collect(Collectors.toList()))
+								.error(Boolean.FALSE).msg("Due Report Fetch").build());
+	}
+
 	@PostMapping("/insertcontract")
 	public ResponseEntity<Responce> insertRentContract(@RequestBody RentContractDto rentContractDto) {
 		RentContract rentContract = new RentContract();
@@ -71,10 +87,15 @@ public class RentController {
 		RentContract save = rentContractRepository.save(rentContract);
 
 		if (save != null)
-			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID()).escalation(save.getEscalation())
-					.lesseeBranchType(save.getLesseeBranchType()).monthlyRent(save.getMonthlyRent())
-					.renewalTenure(save.getRenewalTenure()).rentEndDate(save.getRentEndDate())
-					.rentStartDate(save.getRentStartDate()).build());// Existing method call to calculate rent due data.
+
+			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID()).contractID(save.getUniqueID())
+					.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
+					.monthlyRent(save.getMonthlyRent()).renewalTenure(save.getRenewalTenure())
+					.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());// Existing
+																										// method call
+																										// to calculate
+																										// rent due
+																										// data.
 		else
 
 			return ResponseEntity.status(HttpStatus.OK)
@@ -94,11 +115,13 @@ public class RentController {
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentContractDto)
 				.msg("Data Added Sucessfully...!").error(Boolean.FALSE).build());
 	}
-/**
- * method is use to calculate Rent Due..!
- * @param data
- */
-	public static void createRentdue(Rentduecalculation data) {
+
+	/**
+	 * method is use to calculate Rent Due..!
+	 * 
+	 * @param data
+	 */
+	public void createRentdue(Rentduecalculation data) {
 		double monthlyRent = data.getMonthlyRent();
 		int escalationPercent = Integer.parseInt(data.getEscalation().trim());
 
@@ -111,8 +134,10 @@ public class RentController {
 
 		for (int y = rentStartDate.getYear(); y <= rentEndDate.getYear(); y++) {
 			RentDue due = new RentDue();
-			due.setRentDueID(data.getBranchID() + "_" + data.getLesseeBranchType() + y);
+			due.setRentDueID(data.getBranchID() + "-" + data.getContractID() + "-" + data.getLesseeBranchType() + y);
 			due.setYear(y);
+			due.setContractID(data.getContractID());
+			due.setEscalation(escalationPercent);
 			due.setStartDate(rentStartDate);
 			due.setEndDate(rentEndDate);
 
@@ -454,6 +479,9 @@ public class RentController {
 				}
 
 			}
+
+			// save to rent due data in Data Base_Table
+			dueRepository.save(due);
 
 		}
 
