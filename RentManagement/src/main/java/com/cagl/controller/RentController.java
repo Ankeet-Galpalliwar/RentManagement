@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -26,17 +25,20 @@ import com.cagl.dto.RentContractDto;
 import com.cagl.dto.Rentduecalculation;
 import com.cagl.dto.Responce;
 import com.cagl.dto.RfBranchmasterDto;
+import com.cagl.dto.provisionDto;
 import com.cagl.entity.BranchDetail;
 import com.cagl.entity.IfscMaster;
 import com.cagl.entity.Recipiant;
 import com.cagl.entity.RentContract;
 import com.cagl.entity.RentDue;
 import com.cagl.entity.RfBranchMaster;
+import com.cagl.entity.provision;
 import com.cagl.repository.BranchDetailRepository;
 import com.cagl.repository.RecipiantRepository;
 import com.cagl.repository.RentContractRepository;
 import com.cagl.repository.RfBrachRepository;
 import com.cagl.repository.ifscMasterRepository;
+import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +65,25 @@ public class RentController {
 
 	@Autowired
 	rentDueRepository dueRepository;
+	
+	@Autowired
+	provisionRepository provisionRepository;
+	
+	
+	
+	@PostMapping("addprovision")
+	public ResponseEntity<Responce> addprovison(@RequestBody provisionDto provisionDto){
+		provision provision=new provision();
+		BeanUtils.copyProperties(provisionDto, provision);
+		provision.setProvisionID(provisionDto.getContractID()+"-"+provisionDto.getMonth()+"/"+provisionDto.getYear());
+		provision save = provisionRepository.save(provision);
+		BeanUtils.copyProperties(save, provisionDto);
+		return ResponseEntity
+				.status(HttpStatus.OK).body(
+						Responce.builder()
+								.data(provisionDto)
+								.error(Boolean.FALSE).msg("provision Added").build());
+	}
 
 	@GetMapping("getduereport")
 	public ResponseEntity<Responce> getDueReport(@RequestParam String value) {
@@ -134,7 +155,7 @@ public class RentController {
 
 		for (int y = rentStartDate.getYear(); y <= rentEndDate.getYear(); y++) {
 			RentDue due = new RentDue();
-			due.setRentDueID(data.getBranchID() + "-" + data.getContractID() + "-" + data.getLesseeBranchType() + y);
+			due.setRentDueID(data.getBranchID() + "-" + data.getContractID() + "-"+ y);
 			due.setYear(y);
 			due.setContractID(data.getContractID());
 			due.setEscalation(escalationPercent);

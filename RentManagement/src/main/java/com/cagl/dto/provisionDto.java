@@ -1,27 +1,17 @@
-package com.cagl.entity;
+package com.cagl.dto;
 
 import java.time.LocalDate;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
-
-@Entity
-@Getter
-@Setter
-@ToString
-@Builder
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class provision {
+@Builder
+public class provisionDto {
 	
-	@Id
 	private String provisionID;
 	private String branchID;
 	private String contractID;
@@ -30,6 +20,5 @@ public class provision {
 	private String provisionAmount;
 	private String remark;
 	private LocalDate dateTime;
-	
 
 }
