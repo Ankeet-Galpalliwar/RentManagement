@@ -24,7 +24,7 @@ public class RentDue {
 
 	@Id
 	private String rentDueID;
-	private String ContractID;
+	private int ContractID;
 	private double january;
 	private double february;
 	private double march;
@@ -40,7 +40,7 @@ public class RentDue {
 	private LocalDate startDate;
 	private LocalDate endDate;
 	private int year;
-	private int escalation;
+	private double escalation;
 	
 	
 }

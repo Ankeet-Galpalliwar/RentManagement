@@ -23,9 +23,10 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Recipiant {
-
+	
+	
 	@Id
-	private String recipiantsID;
+	private int id;
 	private String lessorRecipiantsName;
 	private String lessorBankName;
 	private String lessorBranchName;
@@ -40,5 +41,4 @@ public class Recipiant {
 	@JsonIgnore
 	@JoinColumn(name = "rentcontractID")
 	private RentContract rentContractRecipiant;
-
 }

@@ -1,16 +1,9 @@
 package com.cagl.dto;
 
-import java.time.LocalDate;
-import java.util.List;
-
-import com.cagl.entity.Recipiant;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Data
 @AllArgsConstructor

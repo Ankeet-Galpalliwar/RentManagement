@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RecipiantDto {
 
+	private int id;
 	private String lessorRecipiantsName;
 	private String lessorBankName;
 	private String lessorBranchName;

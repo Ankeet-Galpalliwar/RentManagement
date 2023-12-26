@@ -3,8 +3,6 @@ package com.cagl.dto;
 import java.time.LocalDate;
 import java.util.List;
 
-import javax.persistence.OneToMany;
-
 import com.cagl.entity.Recipiant;
 
 import lombok.AllArgsConstructor;
@@ -18,7 +16,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RentContractDto {
 
-	private String uniqueID;
+	private int uniqueID;
 	private String branchID;
 	//Lesser info
 	private String lessorName;
@@ -28,6 +26,11 @@ public class RentContractDto {
 	private String lessorGstNumber;
 //	private String lessorTdsNumber;
 	private String paymentMode;
+	
+	
+	private String nationality;
+	private String contractStatus; //new & renewal
+	
 	
 	
 	
@@ -96,8 +99,8 @@ public class RentContractDto {
 	private LocalDate agreementEndDate;
 	private LocalDate rentStartDate;
 	private LocalDate rentEndDate;
-	private LocalDate firstRentDate;
-	private LocalDate lastRentDate;
+//	private LocalDate firstRentDate;
+//	private LocalDate lastRentDate;
 //	private LocalDate agreementRefreshStartDate;
 //	private LocalDate agreementRefreshEndDate;
 	private String maintaineneCharge;
@@ -115,23 +118,33 @@ public class RentContractDto {
 	private String securityDepositnoticePeriod;
 	private String securityDepositExitTerm;
 	private int standardDeducition;
-	private int firstMonthvalue;
-	private int lastMonthvalue;
+//	private int firstMonthvalue;
+//	private int lastMonthvalue;
+	
+	// Recipiants Details
+	private String lessorRecipiantsName;
+	private String lessorBankName;
+	private String lessorBranchName;
+	private String lessorIfscNumber;
+	private String lessorAccountNumber;
+	private String panNo;
+	private String gstNo;
+	private double lessorRentAmount;
 	
 	
-	private String rentAmount;
+//	private String rentAmount;
 	private String escalation;
 	private String tds;
 	private String gst;
-	private String renewalTenure;
+//	private String renewalTenure;
 	
 	private String lattitude;
 	private String longitude;
 	private String gpsCoordinates;
 	
 	private double monthlyRent;
-	private int remainingDays;
-	private String renewalStatus;
+//	private int remainingDays;
+//	private String renewalStatus;
 //	private String rentContractStatus;
 	
 	
@@ -141,8 +154,8 @@ public class RentContractDto {
 	private String lessorBankPassBookPath;
 	private String panDocumentPath;
 	
-
+	
+//	@OneToMany( mappedBy = "rentContractRecipiant")
 	private List<Recipiant> recipiants;
-//	private List<RecipiantDto> recipiants;
 
 }

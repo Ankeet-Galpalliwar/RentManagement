@@ -8,6 +8,8 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
+import com.cagl.dto.RecipiantDto;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,7 +27,7 @@ import lombok.ToString;
 public class RentContract {
 	
 	@Id
-	private String uniqueID;
+	private int uniqueID;
 	private String branchID;
 	//Lesser info
 	private String lessorName;
@@ -35,6 +37,11 @@ public class RentContract {
 	private String lessorGstNumber;
 //	private String lessorTdsNumber;
 	private String paymentMode;
+	
+	
+	private String nationality;
+	private String contractStatus; //new & renewal
+	
 	
 	
 	
@@ -103,8 +110,8 @@ public class RentContract {
 	private LocalDate agreementEndDate;
 	private LocalDate rentStartDate;
 	private LocalDate rentEndDate;
-	private LocalDate firstRentDate;
-	private LocalDate lastRentDate;
+//	private LocalDate firstRentDate;
+//	private LocalDate lastRentDate;
 //	private LocalDate agreementRefreshStartDate;
 //	private LocalDate agreementRefreshEndDate;
 	private String maintaineneCharge;
@@ -122,23 +129,33 @@ public class RentContract {
 	private String securityDepositnoticePeriod;
 	private String securityDepositExitTerm;
 	private int standardDeducition;
-	private int firstMonthvalue;
-	private int lastMonthvalue;
+//	private int firstMonthvalue;
+//	private int lastMonthvalue;
+	
+	// Recipiants Details
+	private String lessorRecipiantsName;
+	private String lessorBankName;
+	private String lessorBranchName;
+	private String lessorIfscNumber;
+	private String lessorAccountNumber;
+	private String panNo;
+	private String gstNo;
+	private double lessorRentAmount;
 	
 	
-	private String rentAmount;
+//	private String rentAmount;
 	private String escalation;
 	private String tds;
 	private String gst;
-	private String renewalTenure;
+//	private String renewalTenure;
 	
 	private String lattitude;
 	private String longitude;
 	private String gpsCoordinates;
 	
 	private double monthlyRent;
-	private int remainingDays;
-	private String renewalStatus;
+//	private int remainingDays;
+//	private String renewalStatus;
 //	private String rentContractStatus;
 	
 	
