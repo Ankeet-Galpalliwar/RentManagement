@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -68,7 +69,7 @@ public class RentController {
 	@Autowired
 	provisionRepository provisionRepository;
 
-	/// for adding provision
+	// for adding provision
 	@PostMapping("addprovision")
 	public ResponseEntity<Responce> addprovison(@RequestBody provisionDto provisionDto) {
 		provision provision = new provision();
@@ -81,7 +82,7 @@ public class RentController {
 				.body(Responce.builder().data(provisionDto).error(Boolean.FALSE).msg("provision Added").build());
 	}
 
-	@GetMapping("getduereport")
+	@GetMapping("getduereportUid") // Base on UniqueID
 	public ResponseEntity<Responce> getDueReport(@RequestParam String value) {
 		List<RentDue> getrentdue = dueRepository.getrentdue(value);
 		return ResponseEntity
@@ -91,31 +92,32 @@ public class RentController {
 										.collect(Collectors.toList()))
 								.error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
-	
-	@GetMapping("getduereport1")
+
+	@GetMapping("getduereportBid") // Base on BranchID
 	public ResponseEntity<Responce> getDueReport1(@RequestParam String value) {
 		List<RentDue> getrentdue = dueRepository.getrentdue1(value);
-		return ResponseEntity
-				.status(HttpStatus.OK).body(
-						Responce.builder()
-								.data(getrentdue)
-								.error(Boolean.FALSE).msg("Due Report Fetch").build());
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().data(getrentdue).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
 
+	/**
+	 * @Api is only use for BackEnd Bulk Calculation Purpose..!
+	 * 
+	 */
 //	@GetMapping("makeDue")
-//	public Boolean generateRentDue() {
-//
-//		List<RentContract> allcontract = rentContractRepository.getduemakerIDs();
-//		allcontract.stream().map(e -> {
-//			return Rentduecalculation.builder().branchID(e.getBranchID()).contractID(e.getUniqueID())
-//					.escalation(e.getEscalation()).lesseeBranchType(e.getLesseeBranchType())
-//					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
-//					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
-//		}).collect(Collectors.toList()).stream().forEach(data -> {
-//			createRentdue(data);
-//		});
-//		return true;
-//	}
+	public Boolean generateRentDue() {
+
+		List<RentContract> allcontract = rentContractRepository.getduemakerIDs();
+		allcontract.stream().map(e -> {
+			return Rentduecalculation.builder().branchID(e.getBranchID()).contractID(e.getUniqueID())
+					.escalation(e.getEscalation()).lesseeBranchType(e.getLesseeBranchType())
+					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
+					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
+		}).collect(Collectors.toList()).stream().forEach(data -> {
+			createRentdue(data);
+		});
+		return true;
+	}
 
 	@PostMapping("/insertcontract")
 	public ResponseEntity<Responce> insertRentContract(@RequestBody RentContractDto rentContractDto) {
@@ -137,6 +139,7 @@ public class RentController {
 			rentContract.setPanNo(data.getPanNo());
 			rentContract.setGstNo(data.getGstNo());
 			rentContract.setLessorRentAmount(data.getLessorRentAmount());
+			rentContract.setMonthlyRent(data.getLessorRentAmount());
 			rentContract.setRecipiants(null);
 
 			RentContract save = rentContractRepository.save(rentContract);
@@ -152,8 +155,166 @@ public class RentController {
 				Responce.builder().data(responceData).msg("Data Added Sucessfully...!").error(Boolean.FALSE).build());
 	}
 
+	@GetMapping("getbranchids")
+	public List<String> getBranchIDs(@RequestParam String type) {
+		if (type.toUpperCase().startsWith("RF")) {
+			return rentContractRepository.getbranchIDs("RF").stream().distinct().collect(Collectors.toList());
+		} else if (type.toUpperCase().startsWith("GL")) {
+			return rentContractRepository.getbranchIDs("GL").stream().distinct().collect(Collectors.toList());
+		} else {
+			return new ArrayList<>();
+		}
+	}
+
+	@GetMapping("getbranchdetails")
+	public ResponseEntity<Responce> getBranchDetails(@RequestParam String BranchID, @RequestParam String type) {
+
+		if (type.toUpperCase().startsWith("RF")) {
+			Optional<RfBranchMaster> data = rfBrachRepository.findById(BranchID);
+			if (data.isPresent()) {
+				RfBranchMaster rfBranchMaster = data.get();
+				RfBranchmasterDto build = RfBranchmasterDto.builder()
+						.amContactNumber(rfBranchMaster.getAmContactNumber()).areaName(rfBranchMaster.getAreaName())
+						.branchName(rfBranchMaster.getBranchName()).region(rfBranchMaster.getRegion())
+						.rfBranchID(rfBranchMaster.getRfBranchID()).build();
+				return ResponseEntity.status(HttpStatus.OK)
+						.body(Responce.builder().error(Boolean.FALSE).data(build).msg("Data present..!").build());
+			}
+			return ResponseEntity.status(HttpStatus.OK)
+					.body(Responce.builder().error(Boolean.TRUE).data(null).msg("RF Data Not Present..!").build());
+		} else if (type.toUpperCase().startsWith("GL")) {
+			Optional<BranchDetail> data = branchDetailRepository.findById(BranchID);
+			if (data.isPresent()) {
+				BranchDetail branchDetail = data.get();
+				BranchDto build = BranchDto.builder().areaName(branchDetail.getAreaName())
+						.branchID(branchDetail.getBranchID()).branchName(branchDetail.getBranchName())
+						.region(branchDetail.getRegion()).state(branchDetail.getState()).zone(branchDetail.getZone())
+						.build();
+				return ResponseEntity.status(HttpStatus.OK)
+						.body(Responce.builder().data(build).msg("Branch Data Exist...!").error(Boolean.FALSE).build());
+			}
+			return ResponseEntity.status(HttpStatus.OK).body(
+					Responce.builder().data(null).msg("GL Branch Data Not Exist...!").error(Boolean.TRUE).build());
+		} else {
+			return ResponseEntity.status(HttpStatus.OK).body(
+					Responce.builder().data(new ArrayList<>()).msg("Data Not Exist...!").error(Boolean.TRUE).build());
+		}
+
+	}
+
+	@GetMapping("renewalDetails")
+	public ResponseEntity<Responce> getinfo(@RequestParam String BranchID) {
+
+		List<RentContract> contractData = rentContractRepository.findByBranchID(BranchID);
+		if (contractData != null)
+			return ResponseEntity.status(HttpStatus.OK)
+					.body(Responce.builder().error(Boolean.FALSE)
+							.data(contractData.stream().sorted(Comparator.comparing(RentContract::getUniqueID))
+									.reduce((first, second) -> second).map(e -> {
+										RentContractDto responceData = new RentContractDto();
+										BeanUtils.copyProperties(e, responceData);
+										return responceData;
+									}))
+							.msg("Branch Details").build());
+
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(Responce.builder().error(Boolean.TRUE).data(null).msg("Branch Details").build());
+
+	}
+
+	@GetMapping("/getcontracts")
+	public ResponseEntity<Responce> getContracts(@RequestParam String branchID) {
+		List<RentContractDto> contractInfos = new ArrayList<>();
+		List<RentContract> allContractDetalis = rentContractRepository.findByBranchID(branchID);
+		if (!allContractDetalis.isEmpty()) {
+			allContractDetalis.stream().forEach(contractInfo -> {
+				RentContractDto contractDto = new RentContractDto();
+				BeanUtils.copyProperties(contractInfo, contractDto);
+				contractInfos.add(contractDto);
+			});
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
+					.msg("All Contracts Details fetch..!").data(contractInfos).build());
+		}
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().error(Boolean.TRUE).msg("Contracts Data Not present..!").data(null).build());
+
+	}
+
+	@GetMapping("/getallcontracts")
+	public ResponseEntity<Responce> getAllContracts(@RequestParam String district) {
+		List<RentContractDto> contractInfos = new ArrayList<>();
+		List<RentContract> allContractDetalis = rentContractRepository.findAll();
+		if (!allContractDetalis.isEmpty()) {
+			allContractDetalis.stream()
+					.filter(data -> data.getPremesisDistrict().trim().equalsIgnoreCase(district.trim()))
+					.forEach(contractInfo -> {
+
+						RentContractDto contractDto = new RentContractDto();
+						BeanUtils.copyProperties(contractInfo, contractDto);
+						contractInfos.add(contractDto);
+					});
+			return ResponseEntity.status(HttpStatus.OK)
+					.body(Responce.builder().error(Boolean.FALSE).msg("All Contracts Details fetch..!")
+							.data(contractInfos.stream().sorted(Comparator.comparing(RentContractDto::getUniqueID)))
+							.build());
+		}
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().error(Boolean.TRUE).msg("Contracts Data Not present..!").data(null).build());
+	}
+
+	@PutMapping("/editcontracts")
+	public ResponseEntity<Responce> editContracts(@RequestParam int uniqueID,
+			@RequestBody RentContractDto contractDto) {
+		RentContract rentContract = rentContractRepository.findById(uniqueID).get();
+		BeanUtils.copyProperties(contractDto, rentContract);
+		rentContract.setUniqueID(uniqueID);
+		rentContract.setRecipiants(null);
+		rentContractRepository.save(rentContract);
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().error(Boolean.FALSE).msg("Edit Sucessfully..!").data(contractDto).build());
+
+	}
+
+	@GetMapping("ifscinfo")
+	public ResponseEntity<Responce> getIfscInfo(@RequestParam String ifscNumber) {
+		Optional<IfscMaster> data = ifscMasterRepository.findById(ifscNumber);
+		if (data.isPresent())
+			return ResponseEntity.status(HttpStatus.OK)
+					.body(Responce.builder().data(data.get()).error(Boolean.FALSE).msg("ifsc info").build());
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().data(null).error(Boolean.TRUE).msg("IFSC Info Not Present in Master").build());
+	}
+
+	@GetMapping("getstate")
+	public ResponseEntity<Responce> getState() {
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce
+						.builder().data(rentContractRepository.findAll().stream().map(e -> e.getLesseeState())
+								.distinct().collect(Collectors.toList()))
+						.error(Boolean.FALSE).msg("Get All State").build());
+	}
+
+	@GetMapping("getdistrict")
+	public ResponseEntity<Responce> getDistrictBaseonState(@RequestParam String state) {
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder()
+				.data(rentContractRepository.getdistrict(state).stream().distinct().collect(Collectors.toList()))
+				.error(Boolean.FALSE).msg("Get District").build());
+	}
+
+	@GetMapping("filterBranchIDs")
+	public ResponseEntity<Responce> getBranchIdsforFilter() {
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder()
+						.data(rentContractRepository.findAll().stream().map(e -> e.getBranchID()).distinct()
+								.collect(Collectors.toList()))
+						.error(Boolean.FALSE).msg("Get All Branch IDS base on contract master..!").build());
+	}
+
+	// ======================DUE CLCULATION LOGIC==========================
+
 	/**
-	 * method is use to calculate Rent Due..!
+	 * method is use to calculate Rent Due..! {Base on rent StartDate-EndDate and
+	 * Amount}
 	 * 
 	 * @param data
 	 */
@@ -863,144 +1024,6 @@ public class RentController {
 			dueRepository.save(due);
 
 		}
-
-	}
-
-	@GetMapping("getbranchids")
-	public List<String> getBranchIDs(@RequestParam String type) {
-		if (type.toUpperCase().startsWith("RF")) {
-			return rentContractRepository.getbranchIDs("RF").stream().distinct().collect(Collectors.toList());
-		} else if (type.toUpperCase().startsWith("GL")) {
-			return rentContractRepository.getbranchIDs("GL").stream().distinct().collect(Collectors.toList());
-		} else {
-			return new ArrayList<>();
-		}
-	}
-
-	@GetMapping("getbranchdetails")
-	public ResponseEntity<Responce> getBranchDetails(@RequestParam String BranchID, @RequestParam String type) {
-
-		if (type.toUpperCase().startsWith("RF")) {
-			Optional<RfBranchMaster> data = rfBrachRepository.findById(BranchID);
-			if (data.isPresent()) {
-				RfBranchMaster rfBranchMaster = data.get();
-				RfBranchmasterDto build = RfBranchmasterDto.builder()
-						.amContactNumber(rfBranchMaster.getAmContactNumber()).areaName(rfBranchMaster.getAreaName())
-						.branchName(rfBranchMaster.getBranchName()).region(rfBranchMaster.getRegion())
-						.rfBranchID(rfBranchMaster.getRfBranchID()).build();
-				return ResponseEntity.status(HttpStatus.OK)
-						.body(Responce.builder().error(Boolean.FALSE).data(build).msg("Data present..!").build());
-			}
-			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().error(Boolean.TRUE).data(null).msg("RF Data Not Present..!").build());
-		} else if (type.toUpperCase().startsWith("GL")) {
-			Optional<BranchDetail> data = branchDetailRepository.findById(BranchID);
-			if (data.isPresent()) {
-				BranchDetail branchDetail = data.get();
-				BranchDto build = BranchDto.builder().areaName(branchDetail.getAreaName())
-						.branchID(branchDetail.getBranchID()).branchName(branchDetail.getBranchName())
-						.region(branchDetail.getRegion()).state(branchDetail.getState()).zone(branchDetail.getZone())
-						.build();
-				return ResponseEntity.status(HttpStatus.OK)
-						.body(Responce.builder().data(build).msg("Branch Data Exist...!").error(Boolean.FALSE).build());
-			}
-			return ResponseEntity.status(HttpStatus.OK).body(
-					Responce.builder().data(null).msg("GL Branch Data Not Exist...!").error(Boolean.TRUE).build());
-		} else {
-			return ResponseEntity.status(HttpStatus.OK).body(
-					Responce.builder().data(new ArrayList<>()).msg("Data Not Exist...!").error(Boolean.TRUE).build());
-		}
-
-	}
-
-	@GetMapping("/getallcontracts")
-	public ResponseEntity<Responce> getAllContracts(@RequestParam String district) {
-		List<RentContractDto> contractInfos = new ArrayList<>();
-		List<RentContract> allContractDetalis = rentContractRepository.findAll();
-		if (!allContractDetalis.isEmpty()) {
-			allContractDetalis.stream()
-					.filter(data -> data.getPremesisDistrict().trim().equalsIgnoreCase(district.trim()))
-					.forEach(contractInfo -> {
-
-						RentContractDto contractDto = new RentContractDto();
-						BeanUtils.copyProperties(contractInfo, contractDto);
-						contractInfos.add(contractDto);
-					});
-			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().error(Boolean.FALSE).msg("All Contracts Details fetch..!")
-							.data(contractInfos.stream().sorted(Comparator.comparing(RentContractDto::getUniqueID)))
-							.build());
-		}
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().error(Boolean.TRUE).msg("Contracts Data Not present..!").data(null).build());
-	}
-
-	@PutMapping("/editcontracts")
-	public ResponseEntity<Responce> editContracts(@RequestParam int uniqueID,
-			@RequestBody RentContractDto contractDto) {
-		RentContract rentContract = rentContractRepository.findById(uniqueID).get();
-		BeanUtils.copyProperties(contractDto, rentContract);
-		rentContract.setUniqueID(uniqueID);
-		rentContract.setRecipiants(null);
-		rentContractRepository.save(rentContract);
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().error(Boolean.FALSE).msg("Edit Sucessfully..!").data(contractDto).build());
-
-	}
-
-	@GetMapping("ifscinfo")
-	public ResponseEntity<Responce> getIfscInfo(@RequestParam String ifscNumber) {
-		Optional<IfscMaster> data = ifscMasterRepository.findById(ifscNumber);
-		if (data.isPresent())
-			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().data(data.get()).error(Boolean.FALSE).msg("ifsc info").build());
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(null).error(Boolean.TRUE).msg("IFSC Info Not Present in Master").build());
-	}
-
-	@GetMapping("getstate")
-	public ResponseEntity<Responce> getState() {
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce
-						.builder().data(rentContractRepository.findAll().stream().map(e -> e.getLesseeState())
-								.distinct().collect(Collectors.toList()))
-						.error(Boolean.FALSE).msg("Get All State").build());
-	}
-
-	@GetMapping("getdistrict")
-	public ResponseEntity<Responce> getDistrictBaseonState(@RequestParam String state) {
-		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder()
-				.data(rentContractRepository.getdistrict(state).stream().distinct().collect(Collectors.toList()))
-				.error(Boolean.FALSE).msg("Get District").build());
-	}
-
-	@GetMapping("filterBranchIDs")
-	public ResponseEntity<Responce> getBranchIdsforFilter() {
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder()
-						.data(rentContractRepository.findAll().stream().map(e -> e.getBranchID()).distinct()
-								.collect(Collectors.toList()))
-						.error(Boolean.FALSE).msg("Get All Branch IDS base on contract master..!").build());
-	}
-
-	// ========================== NON-USE==========================
-
-	@GetMapping("/getcontracts")
-	public ResponseEntity<Responce> getContracts(@RequestParam String branchID) {
-		List<RentContractDto> contractInfos = new ArrayList<>();
-		List<RentContract> allContractDetalis = rentContractRepository.findByBranchID(branchID);
-		if (!allContractDetalis.isEmpty()) {
-			allContractDetalis.stream().forEach(contractInfo -> {
-				RentContractDto contractDto = new RentContractDto();
-				BeanUtils.copyProperties(contractInfo, contractDto);
-//				contractDto.setUniqueID(null)
-				contractInfos.add(contractDto);
-			});
-			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
-					.msg("All Contracts Details fetch..!").data(contractInfos).build());
-		}
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().error(Boolean.TRUE).msg("Contracts Data Not present..!").data(null).build());
 
 	}
 
