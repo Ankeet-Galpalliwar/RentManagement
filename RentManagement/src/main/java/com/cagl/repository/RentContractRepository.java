@@ -24,5 +24,9 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	@Query(value = "Select uniqueid from rent_contract", nativeQuery =true)
 	List<Integer> getids();
 	
+	
+	@Query(value = "SELECT * FROM rent_contract where rent_end_date > '2023-12-31'", nativeQuery =true)
+	List<RentContract> getduemakerIDs();
+	
 
 }

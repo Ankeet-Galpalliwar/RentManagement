@@ -91,21 +91,31 @@ public class RentController {
 										.collect(Collectors.toList()))
 								.error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
-
-	@GetMapping("makeDue")
-	public Boolean generateRentDue() {
-
-		List<RentContract> allcontract = rentContractRepository.findAll();
-		allcontract.stream().map(e -> {
-			return Rentduecalculation.builder().branchID(e.getBranchID()).contractID(e.getUniqueID())
-					.escalation(e.getEscalation()).lesseeBranchType(e.getLesseeBranchType())
-					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
-					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
-		}).collect(Collectors.toList()).stream().forEach(data -> {
-			createRentdue(data);
-		});
-		return true;
+	
+	@GetMapping("getduereport1")
+	public ResponseEntity<Responce> getDueReport1(@RequestParam String value) {
+		List<RentDue> getrentdue = dueRepository.getrentdue1(value);
+		return ResponseEntity
+				.status(HttpStatus.OK).body(
+						Responce.builder()
+								.data(getrentdue)
+								.error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
+
+//	@GetMapping("makeDue")
+//	public Boolean generateRentDue() {
+//
+//		List<RentContract> allcontract = rentContractRepository.getduemakerIDs();
+//		allcontract.stream().map(e -> {
+//			return Rentduecalculation.builder().branchID(e.getBranchID()).contractID(e.getUniqueID())
+//					.escalation(e.getEscalation()).lesseeBranchType(e.getLesseeBranchType())
+//					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
+//					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
+//		}).collect(Collectors.toList()).stream().forEach(data -> {
+//			createRentdue(data);
+//		});
+//		return true;
+//	}
 
 	@PostMapping("/insertcontract")
 	public ResponseEntity<Responce> insertRentContract(@RequestBody RentContractDto rentContractDto) {
