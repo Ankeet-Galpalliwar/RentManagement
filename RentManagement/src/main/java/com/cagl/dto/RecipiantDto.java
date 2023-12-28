@@ -23,5 +23,8 @@ public class RecipiantDto {
 	private String gstNo;
 	private double lessorRentAmount;
 	private RentContract rentContractRecipiant;
+	
+	
+
 
 }

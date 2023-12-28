@@ -3,8 +3,6 @@ package com.cagl.dto;
 import java.time.LocalDate;
 import java.util.List;
 
-import com.cagl.entity.Recipiant;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -156,6 +154,6 @@ public class RentContractDto {
 	
 	
 //	@OneToMany( mappedBy = "rentContractRecipiant")
-	private List<Recipiant> recipiants;
+	private List<RecipiantDto> recipiants;
 
 }

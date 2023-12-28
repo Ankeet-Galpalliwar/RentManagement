@@ -1,14 +1,9 @@
 package com.cagl.entity;
 
 import java.time.LocalDate;
-import java.util.List;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
-
-import com.cagl.dto.RecipiantDto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -166,7 +161,7 @@ public class RentContract {
 	private String panDocumentPath;
 	
 	
-	@OneToMany( mappedBy = "rentContractRecipiant")
-	private List<Recipiant> recipiants;
+//	@OneToMany( mappedBy = "rentContractRecipiant")
+//	private List<Recipiant> recipiants;
 
 }

@@ -151,7 +151,6 @@ public class RentController {
 			rentContract.setGstNo(data.getGstNo());
 			rentContract.setLessorRentAmount(data.getLessorRentAmount());
 			rentContract.setMonthlyRent(data.getLessorRentAmount());
-			rentContract.setRecipiants(null);
 
 			RentContract save = rentContractRepository.save(rentContract);
 			responceData.add(save);
@@ -279,7 +278,6 @@ public class RentController {
 		RentContract rentContract = rentContractRepository.findById(uniqueID).get();
 		BeanUtils.copyProperties(contractDto, rentContract);
 		rentContract.setUniqueID(uniqueID);
-		rentContract.setRecipiants(null);
 		rentContractRepository.save(rentContract);
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().error(Boolean.FALSE).msg("Edit Sucessfully..!").data(contractDto).build());
