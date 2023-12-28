@@ -51,6 +51,8 @@ public class RentController {
 
 	@Autowired
 	RentContractRepository rentContractRepository;
+	
+	//check update
 
 //	@Autowired
 //	RecipiantRepository recipiantRepository;
