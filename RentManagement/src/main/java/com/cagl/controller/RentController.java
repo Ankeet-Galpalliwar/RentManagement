@@ -100,7 +100,13 @@ public class RentController {
 	public ResponseEntity<Responce> getDueReport1(@RequestParam String value) {
 		List<RentDue> getrentdue = dueRepository.getrentdue1(value);
 		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(getrentdue).error(Boolean.FALSE).msg("Due Report Fetch").build());
+				.body(Responce.builder().data(getrentdue.stream().map(e->{
+					RentDueDto rentduedto=new RentDueDto();
+					BeanUtils.copyProperties(e, rentduedto);
+					String Status = rentContractRepository.getstatus(e.getContractID());
+					rentduedto.setStatus(Status);
+					return rentduedto;
+				})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
 
 	/**
