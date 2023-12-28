@@ -14,19 +14,19 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 
 	@Query(value = "SELECT  branchid FROM rent_contract where lessee_branch_type LIKE %:uu%", nativeQuery = true)
 	List<String> getbranchIDs(@Param("uu") String uu);
-	
+
 	@Query(value = "SELECT premesis_district FROM rent_contract where lessee_state LIKE %:state%", nativeQuery = true)
 	List<String> getdistrict(@Param("state") String state);
 
 	List<RentContract> findByBranchID(String branchID);
-	
-	
-	@Query(value = "Select uniqueid from rent_contract", nativeQuery =true)
+
+	@Query(value = "Select uniqueid from rent_contract", nativeQuery = true)
 	List<Integer> getids();
-	
-	
-	@Query(value = "SELECT * FROM rent_contract where rent_end_date > '2023-12-31'", nativeQuery =true)
+
+	@Query(value = "SELECT * FROM rent_contract where rent_end_date > '2023-12-31'", nativeQuery = true)
 	List<RentContract> getduemakerIDs();
-	
+
+	@Query(value = "SELECT agreement_activation_status FROM rentmanagementdemo.rent_contract where uniqueid=:uid", nativeQuery = true)
+	String getstatus(@Param("uid") int uid);
 
 }

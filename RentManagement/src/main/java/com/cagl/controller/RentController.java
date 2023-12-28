@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.cagl.dto.BranchDto;
 import com.cagl.dto.RentContractDto;
+import com.cagl.dto.RentDueDto;
 import com.cagl.dto.Rentduecalculation;
 import com.cagl.dto.Responce;
 import com.cagl.dto.RfBranchmasterDto;
@@ -85,12 +86,14 @@ public class RentController {
 	@GetMapping("getduereportUid") // Base on UniqueID
 	public ResponseEntity<Responce> getDueReport(@RequestParam String value) {
 		List<RentDue> getrentdue = dueRepository.getrentdue(value);
-		return ResponseEntity
-				.status(HttpStatus.OK).body(
-						Responce.builder()
-								.data(getrentdue.stream().sorted(Comparator.comparing(RentDue::getRentDueID))
-										.collect(Collectors.toList()))
-								.error(Boolean.FALSE).msg("Due Report Fetch").build());
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(getrentdue.stream().map(e -> {
+			RentDueDto rentDue = new RentDueDto();
+			BeanUtils.copyProperties(e, rentDue);
+			String Status = rentContractRepository.getstatus(e.getContractID());
+			rentDue.setStatus(Status);
+			return rentDue;
+
+		})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
 
 	@GetMapping("getduereportBid") // Base on BranchID
