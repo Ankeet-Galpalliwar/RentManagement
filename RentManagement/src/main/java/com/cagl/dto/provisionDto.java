@@ -13,11 +13,12 @@ import lombok.NoArgsConstructor;
 public class provisionDto {
 	
 	private String provisionID;
+	private boolean provisiontype;
 	private String branchID;
 	private String contractID;
 	private int  year;
 	private String month;
-	private String provisionAmount;
+	private double provisionAmount;
 	private String remark;
 	private LocalDate dateTime;
 

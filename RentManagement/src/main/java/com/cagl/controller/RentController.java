@@ -51,8 +51,8 @@ public class RentController {
 
 	@Autowired
 	RentContractRepository rentContractRepository;
-	
-	//check update
+
+	// check update
 
 //	@Autowired
 //	RecipiantRepository recipiantRepository;
@@ -73,10 +73,17 @@ public class RentController {
 	provisionRepository provisionRepository;
 
 	// for adding provision
-	@PostMapping("addprovision")
-	public ResponseEntity<Responce> addprovison(@RequestBody provisionDto provisionDto) {
+	@PostMapping("setprovision")
+	public ResponseEntity<Responce> addprovison(@RequestParam String provisionType,
+			@RequestBody provisionDto provisionDto) {
 		provision provision = new provision();
 		BeanUtils.copyProperties(provisionDto, provision);
+		provision.setDateTime(LocalDate.now());
+		if (provisionType.equalsIgnoreCase("Make"))
+			provision.setProvisiontype(true);
+		else
+			provision.setProvisiontype(false);
+
 		provision.setProvisionID(
 				provisionDto.getContractID() + "-" + provisionDto.getMonth() + "/" + provisionDto.getYear());
 		provision save = provisionRepository.save(provision);
@@ -101,14 +108,13 @@ public class RentController {
 	@GetMapping("getduereportBid") // Base on BranchID
 	public ResponseEntity<Responce> getDueReport1(@RequestParam String value) {
 		List<RentDue> getrentdue = dueRepository.getrentdue1(value);
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(getrentdue.stream().map(e->{
-					RentDueDto rentduedto=new RentDueDto();
-					BeanUtils.copyProperties(e, rentduedto);
-					String Status = rentContractRepository.getstatus(e.getContractID());
-					rentduedto.setStatus(Status);
-					return rentduedto;
-				})).error(Boolean.FALSE).msg("Due Report Fetch").build());
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(getrentdue.stream().map(e -> {
+			RentDueDto rentduedto = new RentDueDto();
+			BeanUtils.copyProperties(e, rentduedto);
+			String Status = rentContractRepository.getstatus(e.getContractID());
+			rentduedto.setStatus(Status);
+			return rentduedto;
+		})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
 
 	/**
