@@ -121,8 +121,11 @@ public class RentController {
 	 */
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
-			@RequestParam int year) {
-		double provision = provisionRepository.getProvision(contractID, year + "", month);
+			@RequestParam String year) {
+		double provision = 0.0;
+		String strprovision = provisionRepository.getProvision(contractID, year + "", month);
+		if (strprovision != null)
+			provision = Double.parseDouble(strprovision);
 		RentContractDto info = new RentContractDto();
 		double tds = 0.0;
 		double DueValue = 0.0;
@@ -134,17 +137,16 @@ public class RentController {
 			BeanUtils.copyProperties(rentContract, info);
 
 			// -------Calculate DUE-----------------
-			LocalDate flagDate = getFlagDate(month, year);
-			String overallDue = provisionRepository.getDueValue(contractID, flagDate + "");
+			LocalDate flagDate = getFlagDate(month, Integer.parseInt(year));
+			String overallDue = provisionRepository.getDueValue(contractID, flagDate + "");// yes -> open / No-> close
 			// Query ->To fetch RentDue Value..!
 			String SqlQuery = "SELECT " + month + " FROM rent_due e where e.contractid='" + contractID
 					+ "' and e.year='" + year + "'";
 			double MonthRent = Double.parseDouble(getvalue(SqlQuery, contractID, month, year + "").get(0));
 			if (overallDue != null)
 				DueValue = Double.parseDouble(overallDue) + MonthRent;
-			else {
+			else
 				DueValue = MonthRent;
-			}
 
 			// ----------Gross Value initiate---------
 			gross = DueValue - provision;
@@ -152,7 +154,9 @@ public class RentController {
 			// ----------TDS Value initiate---------
 			String tdsQuery = "SELECT " + month + " FROM tds e where e.contractid='" + contractID + "' and e.year='"
 					+ year + "'";
-			tds = Double.parseDouble(getvalue(tdsQuery, contractID, month, year + "").get(0));
+			List<String> tdsvalue = getvalue(tdsQuery, contractID, month, year + "");
+			if (!tdsvalue.isEmpty())
+				tds = Double.parseDouble(tdsvalue.get(0));
 
 			// ----------Net Value initiate-----------
 			Net = gross - tds;
@@ -169,6 +173,10 @@ public class RentController {
 								.monthlyRent(info.getLessorRentAmount()).net(Net).provision(provision).tds(tds).build())
 						.error(Boolean.FALSE).msg("Payment Report Data..!").build());
 
+	}
+
+	public ResponseEntity<Responce> createRentDue() {
+		return null;
 	}
 
 	@GetMapping("getduereportUid") // Base on UniqueID

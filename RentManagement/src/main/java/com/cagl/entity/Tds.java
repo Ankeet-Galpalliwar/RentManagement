@@ -23,6 +23,7 @@ public class Tds {
 	
 	@Id
 	private String rentTdsID;
+	private String branchID;
 	private int ContractID;
 	private double january;
 	private double february;

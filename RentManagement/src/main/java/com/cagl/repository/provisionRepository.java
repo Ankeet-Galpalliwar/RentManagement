@@ -13,7 +13,7 @@ public interface provisionRepository extends JpaRepository<provision, String> {
 	
 	
 	@Query(value = "SELECT provision_amount FROM provision where contractid=:contractid and month=:month and year=:year and provisiontype='MAKE'", nativeQuery = true)
-	public double getProvision(@Param("contractid") String contractid, @Param("year") String year, @Param("month") String month);
+	public String getProvision(@Param("contractid") String contractid, @Param("year") String year, @Param("month") String month);
 
 	
 
