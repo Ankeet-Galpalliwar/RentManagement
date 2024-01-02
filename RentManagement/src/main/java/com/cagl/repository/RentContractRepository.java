@@ -26,7 +26,7 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	@Query(value = "SELECT * FROM rent_contract where rent_end_date > '2023-12-31'", nativeQuery = true)
 	List<RentContract> getduemakerIDs();
 
-	@Query(value = "SELECT agreement_activation_status FROM rentmanagementdemo.rent_contract where uniqueid=:uid", nativeQuery = true)
+	@Query(value = "SELECT agreement_activation_status FROM rent_contract where uniqueid=:uid", nativeQuery = true)
 	String getstatus(@Param("uid") int uid);
 
 }

@@ -23,7 +23,7 @@ public class provision {
 	
 	@Id
 	private String provisionID;
-	private boolean provisiontype;
+	private String provisiontype;
 	private String branchID;
 	private String contractID;
 	private int  year;
@@ -31,6 +31,8 @@ public class provision {
 	private double provisionAmount;
 	private String remark;
 	private LocalDate dateTime;
+	private LocalDate flag;
+	
 	
 
 }

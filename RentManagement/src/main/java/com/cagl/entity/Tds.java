@@ -1,7 +1,5 @@
 package com.cagl.entity;
 
-import java.time.LocalDate;
-
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
@@ -21,11 +19,10 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-
-public class RentDue {
-
+public class Tds {
+	
 	@Id
-	private String rentDueID;
+	private String rentTdsID;
 	private int ContractID;
 	private double january;
 	private double february;
@@ -39,10 +36,7 @@ public class RentDue {
 	private double october;
 	private double november;
 	private double december;
-	private LocalDate startDate;
-	private LocalDate endDate;
 	private int year;
-	private double escalation;
-	
-	
+
+
 }

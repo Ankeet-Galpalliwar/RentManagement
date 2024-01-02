@@ -1,19 +1,22 @@
 package com.cagl.controller;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.cagl.dto.BranchDto;
+import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RentContractDto;
 import com.cagl.dto.RentDueDto;
 import com.cagl.dto.Rentduecalculation;
@@ -44,6 +48,11 @@ import com.cagl.repository.rentDueRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 
+ * @author Ankeet
+ *
+ */
 @RestController
 @Slf4j
 @CrossOrigin(origins = "*")
@@ -51,11 +60,6 @@ public class RentController {
 
 	@Autowired
 	RentContractRepository rentContractRepository;
-
-	// check update
-
-//	@Autowired
-//	RecipiantRepository recipiantRepository;
 
 	@Autowired
 	BranchDetailRepository branchDetailRepository;
@@ -72,24 +76,99 @@ public class RentController {
 	@Autowired
 	provisionRepository provisionRepository;
 
-	// for adding provision
-	@PostMapping("setprovision")
+	@Autowired
+	private NamedParameterJdbcTemplate jdbcTemplate;
+
+	/**
+	 * @API -> TO make Provision or Reverse Provision
+	 * 
+	 */
+	@PostMapping("/setprovision")
 	public ResponseEntity<Responce> addprovison(@RequestParam String provisionType,
-			@RequestBody provisionDto provisionDto) {
+			@RequestBody provisionDto provisionDto) throws ParseException {
 		provision provision = new provision();
 		BeanUtils.copyProperties(provisionDto, provision);
 		provision.setDateTime(LocalDate.now());
-		if (provisionType.equalsIgnoreCase("Make"))
-			provision.setProvisiontype(true);
-		else
-			provision.setProvisiontype(false);
-
 		provision.setProvisionID(
 				provisionDto.getContractID() + "-" + provisionDto.getMonth() + "/" + provisionDto.getYear());
+		// Flag Value is use only for to generate Payment report.
+		provision.setFlag(getFlagDate(provisionDto.getMonth(), provisionDto.getYear())); // setting some Dummy Date base
+																							// on Month&Year
 		provision save = provisionRepository.save(provision);
 		BeanUtils.copyProperties(save, provisionDto);
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(provisionDto).error(Boolean.FALSE).msg("provision Added").build());
+	}
+
+	/**
+	 * @API-> Use to fetch value with Dynamic column Name Using JDBD Template
+	 * @param sqlQuery
+	 * @param contractID
+	 * @param month
+	 * @param year
+	 * @return
+	 */
+	public List<String> getvalue(String sqlQuery, String contractID, String month, String year) {
+
+		return jdbcTemplate.query(sqlQuery, (resultSet, rowNum) -> {
+			return resultSet.getString(1);
+		});
+	}
+
+	/**
+	 * @API -> To Generate Payment Report
+	 * @return Report DtoObject.
+	 */
+	@GetMapping("/generatePaymentReport")
+	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
+			@RequestParam int year) {
+		double provision = provisionRepository.getProvision(contractID, year + "", month);
+		RentContractDto info = new RentContractDto();
+		double tds = 0.0;
+		double DueValue = 0.0;
+		double gross = 0.0;
+		double Net = 0.0;
+		try {
+			// ---------Contract Info---------------
+			RentContract rentContract = rentContractRepository.findById(Integer.parseInt(contractID)).get();
+			BeanUtils.copyProperties(rentContract, info);
+
+			// -------Calculate DUE-----------------
+			LocalDate flagDate = getFlagDate(month, year);
+			String overallDue = provisionRepository.getDueValue(contractID, flagDate + "");
+			// Query ->To fetch RentDue Value..!
+			String SqlQuery = "SELECT " + month + " FROM rent_due e where e.contractid='" + contractID
+					+ "' and e.year='" + year + "'";
+			double MonthRent = Double.parseDouble(getvalue(SqlQuery, contractID, month, year + "").get(0));
+			if (overallDue != null)
+				DueValue = Double.parseDouble(overallDue) + MonthRent;
+			else {
+				DueValue = MonthRent;
+			}
+
+			// ----------Gross Value initiate---------
+			gross = DueValue - provision;
+
+			// ----------TDS Value initiate---------
+			String tdsQuery = "SELECT " + month + " FROM tds e where e.contractid='" + contractID + "' and e.year='"
+					+ year + "'";
+			tds = Double.parseDouble(getvalue(tdsQuery, contractID, month, year + "").get(0));
+
+			// ----------Net Value initiate-----------
+			Net = gross - tds;
+
+		} catch (Exception e) {
+			System.out.println(e + "---------Exception---------");
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Responce.builder().data(null).error(Boolean.TRUE)
+					.msg("Payment Report Generation Faild..!").build());
+		}
+
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder()
+						.data(PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info)
+								.monthlyRent(info.getLessorRentAmount()).net(Net).provision(provision).tds(tds).build())
+						.error(Boolean.FALSE).msg("Payment Report Data..!").build());
+
 	}
 
 	@GetMapping("getduereportUid") // Base on UniqueID
@@ -323,6 +402,21 @@ public class RentController {
 						.data(rentContractRepository.findAll().stream().map(e -> e.getBranchID()).distinct()
 								.collect(Collectors.toList()))
 						.error(Boolean.FALSE).msg("Get All Branch IDS base on contract master..!").build());
+	}
+
+	// =======================GENERATE FLAG DATE ===========================
+
+	public LocalDate getFlagDate(String month, int year) throws ParseException {
+		String monthInput = month;
+		SimpleDateFormat sdfInput = new SimpleDateFormat("MMMM");
+		Date date = sdfInput.parse(monthInput);
+		java.util.Calendar calendar = java.util.Calendar.getInstance();
+		calendar.setTime(date);
+		int monthValue = calendar.get(java.util.Calendar.MONTH) + 1;
+		// Convert to two-digit string with leading zeros
+		String monthValueString = String.format("%02d", monthValue);
+
+		return LocalDate.parse(year + "-" + monthValueString + "-01");
 	}
 
 	// ======================DUE CLCULATION LOGIC==========================
