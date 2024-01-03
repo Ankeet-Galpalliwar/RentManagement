@@ -74,14 +74,13 @@ public class RentController {
 	rentDueRepository dueRepository;
 
 	@Autowired
-	provisionRepository provisionRepository;
+	provisionRepository provisionRepository;// ouija
 
 	@Autowired
 	private NamedParameterJdbcTemplate jdbcTemplate;
 
 	/**
 	 * @API -> TO make Provision or Reverse Provision
-	 * 
 	 */
 	@PostMapping("/setprovision")
 	public ResponseEntity<Responce> addprovison(@RequestParam String provisionType,
@@ -100,6 +99,38 @@ public class RentController {
 				.body(Responce.builder().data(provisionDto).error(Boolean.FALSE).msg("provision Added").build());
 	}
 
+	/**
+	 * @API -> TO Get Provision or Reverse Provision
+	 * 
+	 * 
+	 * 
+	 api is use  nfor document purpose and there us is any so many  thigs and We have to doo thata thgs 
+	 */
+	@GetMapping("/getprovision")
+	public ResponseEntity<Responce> getprovision(@RequestParam String flag, @RequestParam String year) {
+		List<provisionDto> allprovisionDto = new ArrayList<>();
+		if (flag.equalsIgnoreCase("all")) {
+			List<provision> allprovision = provisionRepository.findAll();
+			allprovisionDto = allprovision.stream().map(e -> {
+				provisionDto dto = new provisionDto();
+				BeanUtils.copyProperties(e, dto);
+				return dto;
+			}).collect(Collectors.toList());
+			return ResponseEntity.status(HttpStatus.OK)
+					.body(Responce.builder().data(allprovisionDto).error(Boolean.FALSE).msg("All provision").build());
+		} else {
+			List<provision> allprovision = provisionRepository.getprovion(flag, year);
+			allprovisionDto = allprovision.stream().map(e -> {
+				provisionDto dto = new provisionDto();
+				BeanUtils.copyProperties(e, dto);
+				return dto;
+			}).collect(Collectors.toList());
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
+					.data(allprovisionDto).msg("provision Base on BranchID").build());
+		}
+	}
+	
+	
 	/**
 	 * @API-> Use to fetch value with Dynamic column Name Using JDBD Template
 	 * @param sqlQuery
@@ -138,7 +169,7 @@ public class RentController {
 
 			// -------Calculate DUE-----------------
 			LocalDate flagDate = getFlagDate(month, Integer.parseInt(year));
-			String overallDue = provisionRepository.getDueValue(contractID, flagDate + "");// yes -> open / No-> close
+			String overallDue = provisionRepository.getDueValue(contractID, flagDate + "");
 			// Query ->To fetch RentDue Value..!
 			String SqlQuery = "SELECT " + month + " FROM rent_due e where e.contractid='" + contractID
 					+ "' and e.year='" + year + "'";
