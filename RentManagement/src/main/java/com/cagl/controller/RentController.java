@@ -88,6 +88,7 @@ public class RentController {
 		provision provision = new provision();
 		BeanUtils.copyProperties(provisionDto, provision);
 		provision.setDateTime(LocalDate.now());
+		provision.setProvisiontype(provisionType);
 		provision.setProvisionID(
 				provisionDto.getContractID() + "-" + provisionDto.getMonth() + "/" + provisionDto.getYear());
 		// Flag Value is use only for to generate Payment report.
@@ -111,7 +112,7 @@ public class RentController {
 		List<provisionDto> allprovisionDto = new ArrayList<>();
 		if (flag.equalsIgnoreCase("all")) {
 			List<provision> allprovision = provisionRepository.findAll();
-			allprovisionDto = allprovision.stream().map(e -> {
+			allprovisionDto = allprovision.stream().filter(e->e.getYear()==Integer.parseInt(year)).map(e -> {
 				provisionDto dto = new provisionDto();
 				BeanUtils.copyProperties(e, dto);
 				return dto;
@@ -150,9 +151,12 @@ public class RentController {
 	 * @API -> To Generate Payment Report
 	 * @return Report DtoObject.
 	 */
-	@GetMapping("/generatePaymentReport")
-	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
-			@RequestParam String year) {
+	
+	
+	
+	
+	public PaymentReportDto generatePaymentreport(String contractID,String month,String year) {
+		
 		double provision = 0.0;
 		String strprovision = provisionRepository.getProvision(contractID, year + "", month);
 		if (strprovision != null)
@@ -194,18 +198,58 @@ public class RentController {
 
 		} catch (Exception e) {
 			System.out.println(e + "---------Exception---------");
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Responce.builder().data(null).error(Boolean.TRUE)
-					.msg("Payment Report Generation Faild..!").build());
+//			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Responce.builder().data(null).error(Boolean.TRUE)
+//					.msg("Payment Report Generation Faild..!").build());
 		}
+		
+	return	PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info)
+		.monthlyRent(info.getLessorRentAmount()).net(Net).provision(provision).tds(tds).build();
 
+//		return ResponseEntity.status(HttpStatus.OK)
+//				.body(Responce.builder()
+//						.data(PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info)
+//								.monthlyRent(info.getLessorRentAmount()).net(Net).provision(provision).tds(tds).build())
+//						.error(Boolean.FALSE).msg("Payment Report Data..!").build());
+
+		
+		
+		
+	}
+	
+	
+	
+	
+	@GetMapping("/generatePaymentReport")
+	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
+			@RequestParam String year) {
+		if(contractID.equalsIgnoreCase("all")) {
+		List<PaymentReportDto> reports=new ArrayList<>();
+		
+		List<String> getcontractIDs = rentContractRepository.getcontractIDs();
+		if(getcontractIDs!=null)
+			getcontractIDs.stream().map(e->{
+			return	reports.add(generatePaymentreport(e, month, year));
+			}).collect(Collectors.toList());
+		
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder()
-						.data(PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info)
-								.monthlyRent(info.getLessorRentAmount()).net(Net).provision(provision).tds(tds).build())
+						.data(reports)
 						.error(Boolean.FALSE).msg("Payment Report Data..!").build());
+		}else {
+		return	 ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder()
+						.data(generatePaymentreport(contractID, month, year))
+						.error(Boolean.FALSE).msg("Payment Report Data..!").build());
+		}
 
 	}
 
+	
+	
+	
+	
+	
+	
 	public ResponseEntity<Responce> createRentDue() {
 		return null;
 	}
