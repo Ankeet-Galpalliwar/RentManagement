@@ -92,8 +92,9 @@ public class RentController {
 		provision.setProvisionID(
 				provisionDto.getContractID() + "-" + provisionDto.getMonth() + "/" + provisionDto.getYear());
 		// Flag Value is use only for to generate Payment report.
-		provision.setFlag(getFlagDate(provisionDto.getMonth(), provisionDto.getYear())); // setting some Dummy Date base
-																							// on Month&Year
+		provision.setFlag(getFlagDate(provisionDto.getMonth(), provisionDto.getYear(), "start")); // setting some Dummy
+																									// Date base
+		// on Month&Year
 		provision save = provisionRepository.save(provision);
 		BeanUtils.copyProperties(save, provisionDto);
 		return ResponseEntity.status(HttpStatus.OK)
@@ -105,14 +106,15 @@ public class RentController {
 	 * 
 	 * 
 	 * 
-	 api is use  nfor document purpose and there us is any so many  thigs and We have to doo thata thgs 
+	 *      api is use nfor document purpose and there us is any so many thigs and
+	 *      We have to doo thata thgs
 	 */
 	@GetMapping("/getprovision")
 	public ResponseEntity<Responce> getprovision(@RequestParam String flag, @RequestParam String year) {
 		List<provisionDto> allprovisionDto = new ArrayList<>();
 		if (flag.equalsIgnoreCase("all")) {
 			List<provision> allprovision = provisionRepository.findAll();
-			allprovisionDto = allprovision.stream().filter(e->e.getYear()==Integer.parseInt(year)).map(e -> {
+			allprovisionDto = allprovision.stream().filter(e -> e.getYear() == Integer.parseInt(year)).map(e -> {
 				provisionDto dto = new provisionDto();
 				BeanUtils.copyProperties(e, dto);
 				return dto;
@@ -130,8 +132,7 @@ public class RentController {
 					.data(allprovisionDto).msg("provision Base on BranchID").build());
 		}
 	}
-	
-	
+
 	/**
 	 * @API-> Use to fetch value with Dynamic column Name Using JDBD Template
 	 * @param sqlQuery
@@ -143,6 +144,7 @@ public class RentController {
 	public List<String> getvalue(String sqlQuery, String contractID, String month, String year) {
 
 		return jdbcTemplate.query(sqlQuery, (resultSet, rowNum) -> {
+//			resultSet.
 			return resultSet.getString(1);
 		});
 	}
@@ -151,16 +153,13 @@ public class RentController {
 	 * @API -> To Generate Payment Report
 	 * @return Report DtoObject.
 	 */
-	
-	
-	
-	
-	public PaymentReportDto generatePaymentreport(String contractID,String month,String year) {
-		
+
+	public PaymentReportDto generatePaymentreport(String contractID, String month, String year) {
+
 		double provision = 0.0;
-		String strprovision = provisionRepository.getProvision(contractID, year + "", month);
-		if (strprovision != null)
-			provision = Double.parseDouble(strprovision);
+//		String strprovision = provisionRepository.getProvision(contractID, year + "", month);
+//		if (strprovision != null)
+//			provision = Double.parseDouble(strprovision);
 		RentContractDto info = new RentContractDto();
 		double tds = 0.0;
 		double DueValue = 0.0;
@@ -172,26 +171,31 @@ public class RentController {
 			BeanUtils.copyProperties(rentContract, info);
 
 			// -------Calculate DUE-----------------
-			LocalDate flagDate = getFlagDate(month, Integer.parseInt(year));
-			String overallDue = provisionRepository.getDueValue(contractID, flagDate + "");
+			LocalDate flagDate = getFlagDate(month, Integer.parseInt(year), "start");
+			String overallprovisioin = provisionRepository.getoverallprovisioin(contractID, flagDate + "");
 			// Query ->To fetch RentDue Value..!
 			String SqlQuery = "SELECT " + month + " FROM rent_due e where e.contractid='" + contractID
 					+ "' and e.year='" + year + "'";
 			double MonthRent = Double.parseDouble(getvalue(SqlQuery, contractID, month, year + "").get(0));
-			if (overallDue != null)
-				DueValue = Double.parseDouble(overallDue) + MonthRent;
-			else
-				DueValue = MonthRent;
+			if (overallprovisioin != null) {
+				//-----------provision value Initiate-----------------//overall active base on date provision sum ...!
+				provision=Double.parseDouble(overallprovisioin);
 
+				DueValue = Double.parseDouble(overallprovisioin) + MonthRent;
+			}else
+				DueValue = MonthRent;
+			
+			
 			// ----------Gross Value initiate---------
 			gross = DueValue - provision;
 
 			// ----------TDS Value initiate---------
-			String tdsQuery = "SELECT " + month + " FROM tds e where e.contractid='" + contractID + "' and e.year='"
-					+ year + "'";
-			List<String> tdsvalue = getvalue(tdsQuery, contractID, month, year + "");
-			if (!tdsvalue.isEmpty())
-				tds = Double.parseDouble(tdsvalue.get(0));
+//			String tdsQuery = "SELECT " + month + " FROM tds e where e.contractid='" + contractID + "' and e.year='"
+//					+ year + "'";
+//			List<String> tdsvalue = getvalue(tdsQuery, contractID, month, year + "");
+//			if (!tdsvalue.isEmpty())
+//				tds = Double.parseDouble(tdsvalue.get(0));
+			
 
 			// ----------Net Value initiate-----------
 			Net = gross - tds;
@@ -201,55 +205,39 @@ public class RentController {
 //			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Responce.builder().data(null).error(Boolean.TRUE)
 //					.msg("Payment Report Generation Faild..!").build());
 		}
-		
-	return	PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info)
-		.monthlyRent(info.getLessorRentAmount()).net(Net).provision(provision).tds(tds).build();
 
+		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(info.getLessorRentAmount())
+				.net(Net).provision(provision).tds(tds).build();
 //		return ResponseEntity.status(HttpStatus.OK)
 //				.body(Responce.builder()
 //						.data(PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info)
 //								.monthlyRent(info.getLessorRentAmount()).net(Net).provision(provision).tds(tds).build())
-//						.error(Boolean.FALSE).msg("Payment Report Data..!").build());
-
-		
-		
-		
+//						.error(Boolean.FALSE).msg("Payment Report Data..!").build());			
 	}
-	
-	
-	
-	
+
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
 			@RequestParam String year) {
-		if(contractID.equalsIgnoreCase("all")) {
-		List<PaymentReportDto> reports=new ArrayList<>();
-		
-		List<String> getcontractIDs = rentContractRepository.getcontractIDs();
-		if(getcontractIDs!=null)
-			getcontractIDs.stream().map(e->{
-			return	reports.add(generatePaymentreport(e, month, year));
-			}).collect(Collectors.toList());
-		
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder()
-						.data(reports)
-						.error(Boolean.FALSE).msg("Payment Report Data..!").build());
-		}else {
-		return	 ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder()
-						.data(generatePaymentreport(contractID, month, year))
-						.error(Boolean.FALSE).msg("Payment Report Data..!").build());
+		if (contractID.equalsIgnoreCase("all")) {
+			List<PaymentReportDto> reports = new ArrayList<>();
+
+			String flagDate = year + "-12-31";
+			List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate);
+			if (getcontractIDs != null)
+				getcontractIDs.stream().map(e -> {
+					return reports.add(generatePaymentreport(e, month, year));
+				}).collect(Collectors.toList());
+
+			return ResponseEntity.status(HttpStatus.OK)
+					.body(Responce.builder().data(reports).error(Boolean.FALSE).msg("Payment Report Data..!").build());
+		} else {
+			return ResponseEntity.status(HttpStatus.OK)
+					.body(Responce.builder().data(generatePaymentreport(contractID, month, year)).error(Boolean.FALSE)
+							.msg("Payment Report Data..!").build());
 		}
 
 	}
 
-	
-	
-	
-	
-	
-	
 	public ResponseEntity<Responce> createRentDue() {
 		return null;
 	}
@@ -489,7 +477,7 @@ public class RentController {
 
 	// =======================GENERATE FLAG DATE ===========================
 
-	public LocalDate getFlagDate(String month, int year) throws ParseException {
+	public LocalDate getFlagDate(String month, int year, String sd) throws ParseException {
 		String monthInput = month;
 		SimpleDateFormat sdfInput = new SimpleDateFormat("MMMM");
 		Date date = sdfInput.parse(monthInput);
@@ -498,9 +486,12 @@ public class RentController {
 		int monthValue = calendar.get(java.util.Calendar.MONTH) + 1;
 		// Convert to two-digit string with leading zeros
 		String monthValueString = String.format("%02d", monthValue);
-
-		return LocalDate.parse(year + "-" + monthValueString + "-01");
+		if (sd.equalsIgnoreCase("start"))
+			return LocalDate.parse(year + "-" + monthValueString + "-01");
+		else
+			return LocalDate.parse(year + "-" + monthValueString + "-31");
 	}
+
 
 	// ======================DUE CLCULATION LOGIC==========================
 

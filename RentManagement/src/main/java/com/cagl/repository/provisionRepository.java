@@ -10,8 +10,8 @@ import com.cagl.entity.provision;
 
 public interface provisionRepository extends JpaRepository<provision, String> {
 
-	@Query(value = "SELECT sum(provision_amount) FROM provision where contractid=:contractID and flag<=:flag", nativeQuery = true)
-	public String getDueValue(@Param("contractID") String contractID, @Param("flag") String flag);
+	@Query(value = "SELECT sum(provision_amount) FROM provision where contractid=:contractID and flag<:flag", nativeQuery = true)
+	public String getoverallprovisioin(@Param("contractID") String contractID, @Param("flag") String flag);
 	
 	
 	@Query(value = "SELECT provision_amount FROM provision where contractid=:contractid and month=:month and year=:year and provisiontype='MAKE'", nativeQuery = true)
