@@ -24,5 +24,8 @@ public interface rentDueRepository extends JpaRepository<RentDue, String> {
 	
 	@Query(value = "SELECT :selectedColumns FROM rent_due e where e.contractid=:contractid and e.year=:year", nativeQuery = true)
 	public String getRentvalue(@Param("contractid") String contractid, @Param("year") String year, @Param("selectedColumns") String selectedColumns);
+
+	@Query(value = "SELECT * FROM rent_due where contractid=:contractid", nativeQuery = true)
+	public List<RentDue> getUnusedDueData(@Param("contractid") String contractid);
 	
 }

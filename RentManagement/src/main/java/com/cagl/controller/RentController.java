@@ -178,14 +178,14 @@ public class RentController {
 					+ "' and e.year='" + year + "'";
 			double MonthRent = Double.parseDouble(getvalue(SqlQuery, contractID, month, year + "").get(0));
 			if (overallprovisioin != null) {
-				//-----------provision value Initiate-----------------//overall active base on date provision sum ...!
-				provision=Double.parseDouble(overallprovisioin);
+				// -----------provision value Initiate-----------------//overall active base on
+				// date provision sum ...!
+				provision = Double.parseDouble(overallprovisioin);
 
 				DueValue = Double.parseDouble(overallprovisioin) + MonthRent;
-			}else
+			} else
 				DueValue = MonthRent;
-			
-			
+
 			// ----------Gross Value initiate---------
 			gross = DueValue - provision;
 
@@ -195,7 +195,6 @@ public class RentController {
 //			List<String> tdsvalue = getvalue(tdsQuery, contractID, month, year + "");
 //			if (!tdsvalue.isEmpty())
 //				tds = Double.parseDouble(tdsvalue.get(0));
-			
 
 			// ----------Net Value initiate-----------
 			Net = gross - tds;
@@ -321,6 +320,39 @@ public class RentController {
 				Responce.builder().data(responceData).msg("Data Added Sucessfully...!").error(Boolean.FALSE).build());
 	}
 
+	/**
+	 * 
+	 * @param uniqueID
+	 * @param contractDto
+	 * @return
+	 */
+	@PutMapping("/editcontracts")
+	public ResponseEntity<Responce> editContracts(@RequestParam int uniqueID,
+			@RequestBody RentContractDto contractDto) {
+		RentContract rentContract = rentContractRepository.findById(uniqueID).get();
+		boolean flagCheck = false; //its false don't calculate Due..!
+		if (!rentContract.getRentStartDate().toString().equalsIgnoreCase(contractDto.getRentStartDate().toString())
+				|| !rentContract.getRentStartDate().toString()
+						.equalsIgnoreCase(contractDto.getRentStartDate().toString())) {
+			List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
+			unusedDueData.stream().forEach(due -> {
+				dueRepository.delete(due);
+			});
+			flagCheck = true;// if (True) Changes done in RentDue orElse no need to change any thing
+		}
+		BeanUtils.copyProperties(contractDto, rentContract);
+		rentContract.setUniqueID(uniqueID);
+		RentContract save = rentContractRepository.save(rentContract);
+		if (save != null & flagCheck) {
+			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID()).contractID(save.getUniqueID())
+					.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
+					.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
+					.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
+		}
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().error(Boolean.FALSE).msg("Edit Sucessfully..!").data(contractDto).build());
+	}
+
 	@GetMapping("getbranchids")
 	public List<String> getBranchIDs(@RequestParam String type) {
 		if (type.toUpperCase().startsWith("RF")) {
@@ -428,18 +460,6 @@ public class RentController {
 				.body(Responce.builder().error(Boolean.TRUE).msg("Contracts Data Not present..!").data(null).build());
 	}
 
-	@PutMapping("/editcontracts")
-	public ResponseEntity<Responce> editContracts(@RequestParam int uniqueID,
-			@RequestBody RentContractDto contractDto) {
-		RentContract rentContract = rentContractRepository.findById(uniqueID).get();
-		BeanUtils.copyProperties(contractDto, rentContract);
-		rentContract.setUniqueID(uniqueID);
-		rentContractRepository.save(rentContract);
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().error(Boolean.FALSE).msg("Edit Sucessfully..!").data(contractDto).build());
-
-	}
-
 	@GetMapping("ifscinfo")
 	public ResponseEntity<Responce> getIfscInfo(@RequestParam String ifscNumber) {
 		Optional<IfscMaster> data = ifscMasterRepository.findById(ifscNumber);
@@ -491,7 +511,6 @@ public class RentController {
 		else
 			return LocalDate.parse(year + "-" + monthValueString + "-31");
 	}
-
 
 	// ======================DUE CLCULATION LOGIC==========================
 
