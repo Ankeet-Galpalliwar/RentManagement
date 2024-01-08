@@ -17,6 +17,7 @@ public class PaymentReportDto {
 	private double tds;
 	private double net;
 	private double monthlyRent;
+	private String monthYear;
 	private RentContractDto Info;
 	
 }

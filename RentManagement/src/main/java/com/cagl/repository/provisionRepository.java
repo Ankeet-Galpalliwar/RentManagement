@@ -14,7 +14,7 @@ public interface provisionRepository extends JpaRepository<provision, String> {
 	public String getoverallprovisioin(@Param("contractID") String contractID, @Param("flag") String flag);
 	
 	
-	@Query(value = "SELECT provision_amount FROM provision where contractid=:contractid and month=:month and year=:year and provisiontype='MAKE'", nativeQuery = true)
+	@Query(value = "SELECT provision_amount FROM provision where contractid=:contractid and month=:month and year=:year", nativeQuery = true)
 	public String getProvision(@Param("contractid") String contractid, @Param("year") String year, @Param("month") String month);
 
 
