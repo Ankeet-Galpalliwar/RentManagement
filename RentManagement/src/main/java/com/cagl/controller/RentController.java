@@ -95,7 +95,6 @@ public class RentController {
 	@Autowired
 	private JdbcTemplate jdbcTemplate1;
 
-	
 	@PostMapping("makeactual")
 	public ResponseEntity<Responce> makeActual(@RequestBody MakeActualDto Data) {
 		String ActualID = Data.getContractID() + "-" + Data.getYear();
@@ -198,7 +197,7 @@ public class RentController {
 		List<String> getvalue = getvalue(SqlQuery);
 		if (getvalue.isEmpty())
 			return null;
-		MonthRent = Double.parseDouble(getvalue(SqlQuery).get(0));
+		MonthRent = Double.parseDouble(getvalue.get(0));
 
 		// ---Variable Creation---
 		double tds = 0.0;
@@ -207,6 +206,7 @@ public class RentController {
 		double Net = 0.0;
 		double provision = 0.0;
 		double Gst = 0.0;
+		double ActualAmount = 0.0;
 
 		String strprovision = provisionRepository.getProvision(contractID, year + "", month);
 		if (strprovision != null) {
@@ -267,6 +267,12 @@ public class RentController {
 			Gst += 0.0;
 			// ----------Net Value initiate-----------
 			Net = gross - tds + Gst;
+			// ----------Rent Actual initiate-----------
+			String actualQuery = "SELECT " + month + " FROM rent_actual e where e.contractid='" + contractID
+					+ "' and e.year='" + year + "'";
+			List<String> actualValue = getvalue(actualQuery);
+			if (!getvalue.isEmpty())
+				ActualAmount = Double.parseDouble(actualValue.get(0));
 
 		} catch (Exception e) {
 
