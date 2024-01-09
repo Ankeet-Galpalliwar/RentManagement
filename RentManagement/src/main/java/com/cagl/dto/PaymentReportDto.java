@@ -16,6 +16,7 @@ public class PaymentReportDto {
 	private double Gross;
 	private double tds;
 	private double net;
+	private double GST;
 	private double monthlyRent;
 	private String monthYear;
 	private RentContractDto Info;

@@ -26,6 +26,7 @@ public class PaymentReport {
 	private double Gross;
 	private double tds;
 	private double net;
+	private double GST;
 	private double monthlyRent;
 	private String month;
 	private String year;

@@ -29,8 +29,8 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	@Query(value = "SELECT agreement_activation_status FROM rent_contract where uniqueid=:uid", nativeQuery = true)
 	String getstatus(@Param("uid") int uid);
 
-	
-	@Query(value = "SELECT uniqueid FROM rent_contract where agreement_activation_status ='open' and rent_start_date >=:flagDate", nativeQuery = true)
+	//and rent_start_date <=:flagDate
+	@Query(value = "SELECT uniqueid FROM rent_contract where agreement_activation_status ='Open' and rent_start_date<=:flagDate and rent_end_date>=:flagDate", nativeQuery = true)
 	List<String> getcontractIDs(@Param("flagDate")String flagDate);
 
 }

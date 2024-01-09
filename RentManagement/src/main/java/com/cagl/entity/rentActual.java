@@ -23,9 +23,21 @@ public class rentActual {
 
 	@Id
 	private String rentActualID;
+	private int ContractID;
+	private double january;
+	private double february;
+	private double march;
+	private double april;
+	private double may;
+	private double june;
+	private double july;
+	private double august;
+	private double september;
+	private double october;
+	private double november;
+	private double december;
+	private LocalDate startDate;
+	private LocalDate endDate;
 	private int year;
-	private int month;
-	private String tds;
-	private double netPay;
-	private String dateTime;
+	private String BranchID;
 }
