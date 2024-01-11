@@ -23,5 +23,6 @@ public class provisionDto {
 	private String remark;
 	private LocalDate dateTime;
 	private LocalDate flag;
+	private RentContractDto info;
 
 }
