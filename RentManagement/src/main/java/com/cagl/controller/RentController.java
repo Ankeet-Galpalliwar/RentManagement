@@ -8,7 +8,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -96,25 +98,35 @@ public class RentController {
 	private JdbcTemplate jdbcTemplate1;
 
 	@PostMapping("makeactual")
-	public ResponseEntity<Responce> makeActual(@RequestBody MakeActualDto Data) {
-		String ActualID = Data.getContractID() + "-" + Data.getYear();
-		Optional<rentActual> actualData = actualRepository.findById(ActualID);
-		if (!actualData.isPresent()) {
-			actualRepository.save(rentActual.builder().january(0).february(0).march(0).april(0).may(0).june(0).july(0)
-					.august(0).september(0).october(0).november(0).december(0).ContractID(Data.getContractID())
-					.BranchID(Data.getBranchID()).endDate(Data.getEndDate()).startDate(Data.getStartDate())
-					.year(Data.getYear()).rentActualID(ActualID).build());
+	public ResponseEntity<Responce> makeActual(@RequestBody List<MakeActualDto> ActualDto) {
+
+		Map<String, String> responce = new HashMap<>();
+
+		if (!ActualDto.isEmpty() & ActualDto != null) {
+			ActualDto.stream().forEach(Data -> {
+				String ActualID = Data.getContractID() + "-" + Data.getYear();
+				Optional<rentActual> actualData = actualRepository.findById(ActualID);
+				if (!actualData.isPresent()) {
+					actualRepository.save(rentActual.builder().january(0).february(0).march(0).april(0).may(0).june(0)
+							.july(0).august(0).september(0).october(0).november(0).december(0)
+							.ContractID(Data.getContractID()).BranchID(Data.getBranchID()).endDate(Data.getEndDate())
+							.startDate(Data.getStartDate()).year(Data.getYear()).rentActualID(ActualID).build());
+				}
+				String query = "update rent_actual set " + Data.getMonth() + "=" + Data.getAmount()
+						+ " where rent_actualid='" + ActualID + "'";
+				jdbcTemplate1.execute("SET SQL_SAFE_UPDATES = 0");
+				int updateResponce = jdbcTemplate1.update(query);
+				if (updateResponce == 0)
+					responce.put(Data.getContractID() + "", "NOT PAID");
+				else
+					responce.put(Data.getContractID() + "", "PAID");
+
+			});
+
 		}
-		String query = "update rent_actual set " + Data.getMonth() + "=" + Data.getAmount() + " where rent_actualid='"
-				+ ActualID + "'";
-		jdbcTemplate1.execute("SET SQL_SAFE_UPDATES = 0");
-		int updateResponce = jdbcTemplate1.update(query);
-		if (updateResponce == 0)
-			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().data(null).error(Boolean.TRUE).msg("Actual Faild").build());
-		else
-			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().data(null).error(Boolean.FALSE).msg("Actual Done").build());
+
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().data(responce).error(Boolean.FALSE).msg("Actual Done").build());
 
 	}
 
@@ -193,14 +205,16 @@ public class RentController {
 	 */
 	public PaymentReportDto generatePaymentreport(String contractID, String month, String year) {
 
+		System.out.println(contractID);
 		// check particular contract is applicable or not for payment report-> To avoid
 		// go inside...!
 		double MonthRent = 0.0;
 		String SqlQuery = "SELECT " + month + " FROM rent_due e where e.contractid='" + contractID + "' and e.year='"
 				+ year + "'";
 		List<String> getvalue = getvalue(SqlQuery);
-		if (getvalue.isEmpty())
+		if (getvalue.isEmpty() || getvalue == null)
 			return null;
+
 		MonthRent = Double.parseDouble(getvalue.get(0));
 
 		// ---Variable Creation---
@@ -297,29 +311,38 @@ public class RentController {
 																						// month)
 			List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
 			if (getcontractIDs != null & !getcontractIDs.isEmpty())
-				getcontractIDs.stream().forEach(e -> {
-					PaymentReportDto generatePaymentreport = generatePaymentreport(e, month, year);
+				getcontractIDs.stream().forEach(cID -> {
+					PaymentReportDto generatePaymentreport = generatePaymentreport(cID, month, year);
 					if (generatePaymentreport != null) {
 						paymentReportRepository.save(PaymentReport.builder()
-								.branchID(generatePaymentreport.getInfo().getBranchID()).contractID(contractID)
+								.branchID(generatePaymentreport.getInfo().getBranchID()).contractID(cID)
 								.due(generatePaymentreport.getDue()).Gross(generatePaymentreport.getGross())
-								.ID(e + "-" + generatePaymentreport.getMonthYear()).month(month)
+								.ID(cID + "-" + generatePaymentreport.getMonthYear()).month(month)
 								.monthlyRent(generatePaymentreport.getMonthlyRent()).net(generatePaymentreport.getNet())
 								.provision(generatePaymentreport.getProvision())
 								.tds(generatePaymentreport.getProvision()).GST(generatePaymentreport.getGST())
 								.year(year).build());
 					}
-
 				});
-
-//			return ResponseEntity.status(HttpStatus.OK)
-//					.body(Responce.builder().data(reports).error(Boolean.FALSE).msg("Payment Report Data..!").build());
+			return null;// return null to Exit..!
 		}
 
 		if (contractID.equalsIgnoreCase("all")) {
 			List<PaymentReport> data = paymentReportRepository.findByMonthAndYear(month, year);
+			List<PaymentReportDto> prDto = new ArrayList<>();
+			if (data != null) {
+				data.stream().forEach(e -> {
+					RentContractDto rentContractDto = new RentContractDto();
+					BeanUtils.copyProperties(rentContractRepository.findById(Integer.parseInt(e.getContractID())).get(),
+							rentContractDto);
+					prDto.add(PaymentReportDto.builder().ActualAmount(e.getActualAmount()).due(e.getDue())
+							.Gross(e.getGross()).GST(e.getGST()).Info(rentContractDto).monthlyRent(e.getMonthlyRent())
+							.monthYear(e.getYear()).net(e.getNet()).provision(e.getProvision()).tds(e.getTds())
+							.build());
+				});
+			}
 			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().data(data).error(Boolean.FALSE).msg("Payment Report Data..!").build());
+					.body(Responce.builder().data(prDto).error(Boolean.FALSE).msg("Payment Report Data..!").build());
 
 		} else {
 			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year);
@@ -333,7 +356,6 @@ public class RentController {
 			return ResponseEntity.status(HttpStatus.OK).body(
 					Responce.builder().data(generatereport).error(Boolean.FALSE).msg("Payment Report Data..!").build());
 		}
-
 	}
 
 	@GetMapping("getduereportUid") // Base on UniqueID
