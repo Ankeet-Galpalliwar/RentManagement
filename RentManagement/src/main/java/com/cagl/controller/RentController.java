@@ -137,6 +137,10 @@ public class RentController {
 																									// Date base
 		// on Month&Year
 		provision save = provisionRepository.save(provision);
+		if (save != null) {
+			// once provision make Payment data updated if Exist or else its create new one.
+			generatePaymentreport(provisionDto.getContractID(), provisionDto.getMonth(), provisionDto.getYear() + "");
+		}
 		BeanUtils.copyProperties(save, provisionDto);
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(provisionDto).error(Boolean.FALSE).msg("provision Added").build());
@@ -271,34 +275,52 @@ public class RentController {
 			String actualQuery = "SELECT " + month + " FROM rent_actual e where e.contractid='" + contractID
 					+ "' and e.year='" + year + "'";
 			List<String> actualValue = getvalue(actualQuery);
-			if (!getvalue.isEmpty())
+			if (!actualValue.isEmpty() & actualValue != null)
 				ActualAmount = Double.parseDouble(actualValue.get(0));
 
 		} catch (Exception e) {
-
 			System.out.println(e + "---------Exception---------");
 		}
 
 		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(MonthRent).net(Net)
-				.provision(provision).tds(tds).GST(Gst).monthYear(month + "/" + year).build();
+				.provision(provision).tds(tds).ActualAmount(ActualAmount).GST(Gst).monthYear(month + "/" + year)
+				.build();
 	}
 
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
 			@RequestParam String year) throws NumberFormatException, ParseException {
-		if (contractID.equalsIgnoreCase("all")) {
-			List<PaymentReportDto> reports = new ArrayList<>();
+		if (contractID.equalsIgnoreCase("StoreData")) {
+
 			// To avoid unused contract object flag date is use in Query.
 			LocalDate flagDate = getFlagDate(month, Integer.parseInt(year), "Start");// (Start-> to get Start Date of
 																						// month)
 			List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
-			if (getcontractIDs != null)
+			if (getcontractIDs != null & !getcontractIDs.isEmpty())
 				getcontractIDs.stream().forEach(e -> {
-					reports.add(generatePaymentreport(e, month, year));
+					PaymentReportDto generatePaymentreport = generatePaymentreport(e, month, year);
+					if (generatePaymentreport != null) {
+						paymentReportRepository.save(PaymentReport.builder()
+								.branchID(generatePaymentreport.getInfo().getBranchID()).contractID(contractID)
+								.due(generatePaymentreport.getDue()).Gross(generatePaymentreport.getGross())
+								.ID(e + "-" + generatePaymentreport.getMonthYear()).month(month)
+								.monthlyRent(generatePaymentreport.getMonthlyRent()).net(generatePaymentreport.getNet())
+								.provision(generatePaymentreport.getProvision())
+								.tds(generatePaymentreport.getProvision()).GST(generatePaymentreport.getGST())
+								.year(year).build());
+					}
+
 				});
 
+//			return ResponseEntity.status(HttpStatus.OK)
+//					.body(Responce.builder().data(reports).error(Boolean.FALSE).msg("Payment Report Data..!").build());
+		}
+
+		if (contractID.equalsIgnoreCase("all")) {
+			List<PaymentReport> data = paymentReportRepository.findByMonthAndYear(month, year);
 			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().data(reports).error(Boolean.FALSE).msg("Payment Report Data..!").build());
+					.body(Responce.builder().data(data).error(Boolean.FALSE).msg("Payment Report Data..!").build());
+
 		} else {
 			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year);
 			// Here we are saving(Generated Payment Report) Data for audit purpose.
