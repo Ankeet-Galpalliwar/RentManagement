@@ -63,7 +63,6 @@ import lombok.extern.slf4j.Slf4j;
  *
  */
 @RestController
-@Slf4j
 @CrossOrigin(origins = "*")
 public class RentController {
 
@@ -96,6 +95,12 @@ public class RentController {
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate1;
+
+	@GetMapping("getbranch")
+	public ResponseEntity<Responce> getBranchName() {
+//		rentContractRepository.getBranchNames();
+		return null;
+	}
 
 	@PostMapping("makeactual")
 	public ResponseEntity<Responce> makeActual(@RequestBody List<MakeActualDto> ActualDto) {
@@ -136,6 +141,13 @@ public class RentController {
 	@PostMapping("/setprovision")
 	public ResponseEntity<Responce> addprovison(@RequestParam String provisionType,
 			@RequestBody provisionDto provisionDto) throws ParseException {
+
+		Optional<provision> optionalProvision = provisionRepository
+				.findById(provisionDto.getContractID() + "-" + provisionDto.getMonth() + "/" + provisionDto.getYear());
+		if (optionalProvision.isPresent())
+			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(optionalProvision.get())
+					.error(Boolean.TRUE).msg("provision Already Exist").build());
+
 		provision provision = new provision();
 		BeanUtils.copyProperties(provisionDto, provision);
 		if (provisionType.equalsIgnoreCase("Reverse"))
@@ -166,15 +178,16 @@ public class RentController {
 		List<provisionDto> allprovisionDto = new ArrayList<>();
 		if (flag.equalsIgnoreCase("all")) {
 			List<provision> allprovision = provisionRepository.findAll();
-			allprovisionDto = allprovision.stream().filter(e -> e.getYear() == Integer.parseInt(year))
-					.sorted(Comparator.comparing(provision::getContractID).thenComparing(Comparator.comparing(provision::getFlag))).map(e -> {
+			allprovisionDto = allprovision.stream().filter(e -> e.getYear() == Integer.parseInt(year)).sorted(Comparator
+					.comparing(provision::getContractID).thenComparing(Comparator.comparing(provision::getFlag)))
+					.map(e -> {
 						RentContractDto contractdto = new RentContractDto();
 						Optional<RentContract> optionalContract = rentContractRepository
 								.findById(Integer.parseInt(e.getContractID()));
 						if (optionalContract.isPresent())
 							BeanUtils.copyProperties(optionalContract.get(), contractdto);
 						else
-							System.out.println(e.getContractID() +"-> NOT FOUND IN CONTRACT TABLE");
+							System.out.println(e.getContractID() + "-> NOT FOUND IN CONTRACT TABLE");
 						provisionDto dto = new provisionDto();
 						BeanUtils.copyProperties(e, dto);
 						dto.setInfo(contractdto);
@@ -312,7 +325,7 @@ public class RentController {
 		}
 
 		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(MonthRent).net(Net)
-				.provision(provision).tds(tds).ActualAmount(ActualAmount).GST(Gst).monthYear(month + "/" + year)
+				.provision(provision).tds(tds).actualAmount(ActualAmount).gstamt(Gst).monthYear(month + "/" + year)
 				.build();
 	}
 
@@ -335,8 +348,9 @@ public class RentController {
 								.ID(cID + "-" + generatePaymentreport.getMonthYear()).month(month)
 								.monthlyRent(generatePaymentreport.getMonthlyRent()).net(generatePaymentreport.getNet())
 								.provision(generatePaymentreport.getProvision())
-								.tds(generatePaymentreport.getProvision()).GST(generatePaymentreport.getGST())
-								.year(year).build());
+								.ActualAmount(generatePaymentreport.getActualAmount())
+								.tds(generatePaymentreport.getTds()).GST(generatePaymentreport.getGstamt()).year(year)
+								.build());
 					}
 				});
 			return null;// return null to Exit..!
@@ -350,15 +364,14 @@ public class RentController {
 					RentContractDto rentContractDto = new RentContractDto();
 					BeanUtils.copyProperties(rentContractRepository.findById(Integer.parseInt(e.getContractID())).get(),
 							rentContractDto);
-					prDto.add(PaymentReportDto.builder().ActualAmount(e.getActualAmount()).due(e.getDue())
-							.Gross(e.getGross()).GST(e.getGST()).Info(rentContractDto).monthlyRent(e.getMonthlyRent())
-							.monthYear(e.getYear()).net(e.getNet()).provision(e.getProvision()).tds(e.getTds())
-							.build());
+					prDto.add(PaymentReportDto.builder().actualAmount(e.getActualAmount()).due(e.getDue())
+							.Gross(e.getGross()).gstamt(e.getGST()).Info(rentContractDto)
+							.monthlyRent(e.getMonthlyRent()).monthYear(e.getYear()).net(e.getNet())
+							.provision(e.getProvision()).tds(e.getTds()).build());
 				});
 			}
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(Responce.builder().data(prDto).error(Boolean.FALSE).msg("Payment Report Data..!").build());
-
 		} else {
 			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year);
 			// Here we are saving(Generated Payment Report) Data for audit purpose.
@@ -366,8 +379,8 @@ public class RentController {
 					.contractID(contractID).due(generatereport.getDue()).Gross(generatereport.getGross())
 					.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
 					.monthlyRent(generatereport.getMonthlyRent()).net(generatereport.getNet())
-					.provision(generatereport.getProvision()).tds(generatereport.getProvision())
-					.GST(generatereport.getGST()).year(year).build());
+					.provision(generatereport.getProvision()).ActualAmount(generatereport.getActualAmount())
+					.tds(generatereport.getTds()).GST(generatereport.getGstamt()).year(year).build());
 			return ResponseEntity.status(HttpStatus.OK).body(
 					Responce.builder().data(generatereport).error(Boolean.FALSE).msg("Payment Report Data..!").build());
 		}
@@ -382,7 +395,6 @@ public class RentController {
 			String Status = rentContractRepository.getstatus(e.getContractID());
 			rentDue.setStatus(Status);
 			return rentDue;
-
 		})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
 
