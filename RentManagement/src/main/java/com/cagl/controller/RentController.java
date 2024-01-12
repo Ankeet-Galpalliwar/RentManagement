@@ -166,39 +166,37 @@ public class RentController {
 		List<provisionDto> allprovisionDto = new ArrayList<>();
 		if (flag.equalsIgnoreCase("all")) {
 			List<provision> allprovision = provisionRepository.findAll();
-			allprovisionDto = allprovision.stream().filter(e -> e.getYear() == Integer.parseInt(year)).map(e -> {
-				provisionDto dto = new provisionDto();
-				BeanUtils.copyProperties(rentContractRepository.findById(Integer.parseInt(e.getContractID())), dto);
-				RentContractDto contractdto = new RentContractDto();
-				BeanUtils.copyProperties(e, contractdto);
-				dto.setInfo(contractdto);
-				return dto;
-			}).collect(Collectors.toList());
+			allprovisionDto = allprovision.stream().filter(e -> e.getYear() == Integer.parseInt(year))
+					.sorted(Comparator.comparing(provision::getContractID).thenComparing(Comparator.comparing(provision::getFlag))).map(e -> {
+						RentContractDto contractdto = new RentContractDto();
+						Optional<RentContract> optionalContract = rentContractRepository
+								.findById(Integer.parseInt(e.getContractID()));
+						if (optionalContract.isPresent())
+							BeanUtils.copyProperties(optionalContract.get(), contractdto);
+						else
+							System.out.println(e.getContractID() +"-> NOT FOUND IN CONTRACT TABLE");
+						provisionDto dto = new provisionDto();
+						BeanUtils.copyProperties(e, dto);
+						dto.setInfo(contractdto);
+						return dto;
+					}).collect(Collectors.toList());
+
 			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder()
-							.data(allprovisionDto.stream()
-									.sorted(Comparator.comparing(provisionDto::getContractID)
-											.thenComparing(provisionDto::getYear).thenComparing(provisionDto::getMonth))
-									.collect(Collectors.toList()))
-							.error(Boolean.FALSE).msg("All provision").build());
+					.body(Responce.builder().data(allprovisionDto).error(Boolean.FALSE).msg("All provision").build());
 		} else {
 			List<provision> allprovision = provisionRepository.getprovion(flag, year);
-			allprovisionDto = allprovision.stream().map(e -> {
+			allprovisionDto = allprovision.stream().sorted(Comparator.comparing(provision::getFlag)).map(e -> {
 				provisionDto dto = new provisionDto();
 				BeanUtils.copyProperties(e, dto);
 				RentContractDto contractDto = new RentContractDto();
-				BeanUtils.copyProperties(rentContractRepository.findById(Integer.parseInt(e.getContractID())),
+				BeanUtils.copyProperties(rentContractRepository.findById(Integer.parseInt(e.getContractID())).get(),
 						contractDto);
 				dto.setInfo(contractDto);
 				return dto;
 			}).collect(Collectors.toList());
-			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().error(Boolean.FALSE)
-							.data(allprovisionDto.stream()
-									.sorted(Comparator.comparing(provisionDto::getContractID)
-											.thenComparing(provisionDto::getYear).thenComparing(provisionDto::getMonth))
-									.collect(Collectors.toList()))
-							.msg("provision Base on BranchID").build());
+
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
+					.data(allprovisionDto).msg("provision Base on BranchID").build());
 		}
 	}
 

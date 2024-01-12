@@ -19,7 +19,7 @@ public interface provisionRepository extends JpaRepository<provision, String> {
 
 
 	
-	@Query(value = "SELECT * FROM rentmanagementdemo.provision where branchid=:flag and year=:year", nativeQuery =true)
+	@Query(value = "SELECT * FROM provision where contractid=:flag and year=:year", nativeQuery =true)
 	public List<provision> getprovion(@Param("flag")String flag,@Param("year") String year);
 
 	
