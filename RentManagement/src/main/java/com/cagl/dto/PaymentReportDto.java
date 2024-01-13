@@ -18,6 +18,7 @@ public class PaymentReportDto {
 	private double net;
 	private double gstamt;
 	private double actualAmount;
+	private double sdAmount;
 	private double monthlyRent;
 	private String monthYear;
 	private RentContractDto Info;

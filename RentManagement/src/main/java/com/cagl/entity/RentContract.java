@@ -2,8 +2,11 @@ package com.cagl.entity;
 
 import java.time.LocalDate;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -160,7 +163,8 @@ public class RentContract {
 	private String lessorBankPassBookPath;
 	private String panDocumentPath;
 	
-	
+//	@OneToOne(mappedBy = "contract", cascade = CascadeType.)
+//	private SDRecords  records;
 //	@OneToMany( mappedBy = "rentContractRecipiant")
 //	private List<Recipiant> recipiants;
 

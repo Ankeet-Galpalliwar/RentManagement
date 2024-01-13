@@ -3,6 +3,7 @@ package com.cagl.controller;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -25,7 +26,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,6 +37,7 @@ import com.cagl.dto.RentDueDto;
 import com.cagl.dto.Rentduecalculation;
 import com.cagl.dto.Responce;
 import com.cagl.dto.RfBranchmasterDto;
+import com.cagl.dto.SDRecoardDto;
 import com.cagl.dto.provisionDto;
 import com.cagl.entity.BranchDetail;
 import com.cagl.entity.IfscMaster;
@@ -44,6 +45,7 @@ import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RentContract;
 import com.cagl.entity.RentDue;
 import com.cagl.entity.RfBranchMaster;
+import com.cagl.entity.SDRecords;
 import com.cagl.entity.provision;
 import com.cagl.entity.rentActual;
 import com.cagl.repository.BranchDetailRepository;
@@ -51,11 +53,10 @@ import com.cagl.repository.PaymentReportRepository;
 import com.cagl.repository.RentActualRepository;
 import com.cagl.repository.RentContractRepository;
 import com.cagl.repository.RfBrachRepository;
+import com.cagl.repository.SDRecoardRepository;
 import com.cagl.repository.ifscMasterRepository;
 import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
-
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 
@@ -91,15 +92,38 @@ public class RentController {
 	RentActualRepository actualRepository;
 
 	@Autowired
+	SDRecoardRepository sdRepository;
+
+	@Autowired
 	private NamedParameterJdbcTemplate jdbcTemplate;
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate1;
 
-	@GetMapping("getbranch")
-	public ResponseEntity<Responce> getBranchName() {
-//		rentContractRepository.getBranchNames();
-		return null;
+	@GetMapping("setsd")
+	public ResponseEntity<Responce> getSd(@RequestBody SDRecoardDto sdrecord) throws ParseException {
+		Optional<provision> optionalProvision = provisionRepository
+				.findById(sdrecord.getContractID() + "-" + sdrecord.getMonth() + "/" + sdrecord.getYear());
+		if (optionalProvision.isPresent())
+			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(optionalProvision.get())
+					.error(Boolean.TRUE).msg(" Cant't make SD provision Already Exist").build());
+
+		RentContract rentContract = rentContractRepository.findById(sdrecord.getContractID()).get();
+		// If month Year not match Throw Error
+		if ((rentContract.getRentEndDate().getMonth() + "").equalsIgnoreCase(sdrecord.getMonth())
+				& (rentContract.getRentEndDate().getYear() + "").equalsIgnoreCase(sdrecord.getYear() + "")) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(null).error(Boolean.TRUE)
+					.msg("Cant't make SD [RENT END DATE CONFLICT]").build());
+		}
+		String sdID = sdrecord.getContractID() + "-" + sdrecord.getMonth() + "/" + sdrecord.getYear();
+		SDRecords save = sdRepository.save(SDRecords.builder().contractID(sdrecord.getContractID() + "")
+				.flag(getFlagDate(sdrecord.getMonth(), sdrecord.getYear(), "start")).month(sdrecord.getMonth())
+				.remark(sdrecord.getRemark()).sdAmount(sdrecord.getSdAmount()).sdID(sdID).timeZone(LocalDate.now() + "")
+				.build());
+
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().data(save).error(Boolean.TRUE).msg("SD SETTLEMENT DONE..!").build());
+
 	}
 
 	@PostMapping("makeactual")
@@ -253,6 +277,7 @@ public class RentController {
 		double provision = 0.0;
 		double Gst = 0.0;
 		double ActualAmount = 0.0;
+		double sdAmount = 0.0;
 
 		String strprovision = provisionRepository.getProvision(contractID, year + "", month);
 		if (strprovision != null) {
@@ -290,6 +315,12 @@ public class RentController {
 			// ----------Gross Value initiate---------
 			gross = DueValue - provision;
 
+			Optional<SDRecords> sdOptional = sdRepository.findById(contractID + "-" + month + "/" + year);
+			if (sdOptional != null & sdOptional.isPresent()) {
+				gross = gross - sdOptional.get().getSdAmount();
+				sdAmount = sdOptional.get().getSdAmount();
+			}
+
 			// ----------TDS Value initiate---------
 			double overallTDSValue = 0.0;
 			LocalDate sdate = null;
@@ -304,11 +335,8 @@ public class RentController {
 				if (!getvalue(tdsQuery).isEmpty())
 					overallTDSValue += Double.parseDouble(getvalue(tdsQuery).get(0));
 			}
-
-			// IF(TDS->right)->Here TDS Value modify Base on Gross Value..!
-			if (overallTDSValue > 240000)
+			if (overallTDSValue > 240000)// IF(TDS->right)->Here TDS Value modify Base on Gross Value..!
 				tds = Math.round((gross * (10 / 100.0f)));// By Default its (0.0)
-
 			// ----------GST Value initiate-----------
 			Gst += 0.0;
 			// ----------Net Value initiate-----------
@@ -319,11 +347,9 @@ public class RentController {
 			List<String> actualValue = getvalue(actualQuery);
 			if (!actualValue.isEmpty() & actualValue != null)
 				ActualAmount = Double.parseDouble(actualValue.get(0));
-
 		} catch (Exception e) {
 			System.out.println(e + "---------Exception---------");
 		}
-
 		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(MonthRent).net(Net)
 				.provision(provision).tds(tds).actualAmount(ActualAmount).gstamt(Gst).monthYear(month + "/" + year)
 				.build();
