@@ -16,7 +16,6 @@ import lombok.Setter;
 public class SDRecoardDto {
 	private String sdID;
 	private int contractID;
-//	private 
 	private int year;
 	private String month;
 	private double sdAmount;

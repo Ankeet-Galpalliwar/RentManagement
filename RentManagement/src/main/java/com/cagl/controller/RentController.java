@@ -3,7 +3,6 @@ package com.cagl.controller;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.Month;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -110,19 +109,23 @@ public class RentController {
 
 		RentContract rentContract = rentContractRepository.findById(sdrecord.getContractID()).get();
 		// If month Year not match Throw Error
-		if ((rentContract.getRentEndDate().getMonth() + "").equalsIgnoreCase(sdrecord.getMonth())
-				& (rentContract.getRentEndDate().getYear() + "").equalsIgnoreCase(sdrecord.getYear() + "")) {
+		System.out.println(rentContract.getRentEndDate().getMonth() + "--" + sdrecord.getMonth());
+		System.out.println(!(rentContract.getRentEndDate().getMonth() + "").equalsIgnoreCase(sdrecord.getMonth()));
+		System.out.println(rentContract.getRentEndDate().getYear() + "--" + sdrecord.getYear() + "");
+		System.out.println((rentContract.getRentEndDate().getYear() + "").equalsIgnoreCase(sdrecord.getYear() + ""));
+		if (!(rentContract.getRentEndDate().getMonth() + "").equalsIgnoreCase(sdrecord.getMonth())
+				|| !(rentContract.getRentEndDate().getYear() + "").equalsIgnoreCase(sdrecord.getYear() + "")) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(null).error(Boolean.TRUE)
 					.msg("Cant't make SD [RENT END DATE CONFLICT]").build());
 		}
 		String sdID = sdrecord.getContractID() + "-" + sdrecord.getMonth() + "/" + sdrecord.getYear();
 		SDRecords save = sdRepository.save(SDRecords.builder().contractID(sdrecord.getContractID() + "")
 				.flag(getFlagDate(sdrecord.getMonth(), sdrecord.getYear(), "start")).month(sdrecord.getMonth())
-				.remark(sdrecord.getRemark()).sdAmount(sdrecord.getSdAmount()).sdID(sdID).timeZone(LocalDate.now() + "")
-				.build());
+				.year(sdrecord.getYear()).remark(sdrecord.getRemark()).sdAmount(sdrecord.getSdAmount()).sdID(sdID)
+				.timeZone(LocalDate.now() + "").build());
 
 		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(save).error(Boolean.TRUE).msg("SD SETTLEMENT DONE..!").build());
+				.body(Responce.builder().data(save).error(Boolean.FALSE).msg("SD SETTLEMENT DONE..!").build());
 
 	}
 
@@ -257,7 +260,6 @@ public class RentController {
 	 */
 	public PaymentReportDto generatePaymentreport(String contractID, String month, String year) {
 
-		System.out.println(contractID);
 		// check particular contract is applicable or not for payment report-> To avoid
 		// go inside...!
 		double MonthRent = 0.0;
@@ -351,18 +353,16 @@ public class RentController {
 			System.out.println(e + "---------Exception---------");
 		}
 		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(MonthRent).net(Net)
-				.provision(provision).tds(tds).actualAmount(ActualAmount).gstamt(Gst).monthYear(month + "/" + year)
-				.build();
+				.provision(provision).tds(tds).sdAmount(sdAmount).actualAmount(ActualAmount).gstamt(Gst)
+				.monthYear(month + "/" + year).build();
 	}
 
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
 			@RequestParam String year) throws NumberFormatException, ParseException {
 		if (contractID.equalsIgnoreCase("StoreData")) {
-
 			// To avoid unused contract object flag date is use in Query.
 			LocalDate flagDate = getFlagDate(month, Integer.parseInt(year), "Start");// (Start-> to get Start Date of
-																						// month)
 			List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
 			if (getcontractIDs != null & !getcontractIDs.isEmpty())
 				getcontractIDs.stream().forEach(cID -> {
@@ -392,7 +392,7 @@ public class RentController {
 							rentContractDto);
 					prDto.add(PaymentReportDto.builder().actualAmount(e.getActualAmount()).due(e.getDue())
 							.Gross(e.getGross()).gstamt(e.getGST()).Info(rentContractDto)
-							.monthlyRent(e.getMonthlyRent()).monthYear(e.getYear()).net(e.getNet())
+							.monthlyRent(e.getMonthlyRent()).monthYear(e.getMonth() + "/" + e.getYear()).net(e.getNet())
 							.provision(e.getProvision()).tds(e.getTds()).build());
 				});
 			}
