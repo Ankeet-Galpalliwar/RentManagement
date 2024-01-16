@@ -101,6 +101,7 @@ public class RentController {
 
 	@GetMapping("setsd")
 	public ResponseEntity<Responce> getSd(@RequestBody SDRecoardDto sdrecord) throws ParseException {
+		
 		Optional<provision> optionalProvision = provisionRepository
 				.findById(sdrecord.getContractID() + "-" + sdrecord.getMonth() + "/" + sdrecord.getYear());
 		if (optionalProvision.isPresent())
@@ -109,10 +110,6 @@ public class RentController {
 
 		RentContract rentContract = rentContractRepository.findById(sdrecord.getContractID()).get();
 		// If month Year not match Throw Error
-		System.out.println(rentContract.getRentEndDate().getMonth() + "--" + sdrecord.getMonth());
-		System.out.println(!(rentContract.getRentEndDate().getMonth() + "").equalsIgnoreCase(sdrecord.getMonth()));
-		System.out.println(rentContract.getRentEndDate().getYear() + "--" + sdrecord.getYear() + "");
-		System.out.println((rentContract.getRentEndDate().getYear() + "").equalsIgnoreCase(sdrecord.getYear() + ""));
 		if (!(rentContract.getRentEndDate().getMonth() + "").equalsIgnoreCase(sdrecord.getMonth())
 				|| !(rentContract.getRentEndDate().getYear() + "").equalsIgnoreCase(sdrecord.getYear() + "")) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(null).error(Boolean.TRUE)
@@ -150,8 +147,12 @@ public class RentController {
 				int updateResponce = jdbcTemplate1.update(query);
 				if (updateResponce == 0)
 					responce.put(Data.getContractID() + "", "NOT PAID");
-				else
+				else {
+					String ActualUpdateQuery = "update payment_report set actual_amount=" + Data.getAmount()
+							+ " where id='" + Data.getContractID() + "-" + Data.getMonth() + "/" + Data.getYear() + "'";
+					jdbcTemplate1.update(ActualUpdateQuery);
 					responce.put(Data.getContractID() + "", "PAID");
+				}
 
 			});
 
