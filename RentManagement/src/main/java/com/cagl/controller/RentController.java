@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.cagl.dto.BranchDto;
 import com.cagl.dto.MakeActualDto;
 import com.cagl.dto.PaymentReportDto;
+import com.cagl.dto.RecipiantDto;
 import com.cagl.dto.RentContractDto;
 import com.cagl.dto.RentDueDto;
 import com.cagl.dto.Rentduecalculation;
@@ -292,7 +293,16 @@ public class RentController {
 										RentContractDto responceData = new RentContractDto();
 										BeanUtils.copyProperties(e, responceData);
 										responceData.setRentStartDate(e.getRentEndDate().plusDays(1));
-										responceData.setRentEndDate(e.getRentEndDate().plusDays(1).plusMonths(11));
+										responceData.setRentEndDate(e.getRentEndDate().plusMonths(11));
+										List<RecipiantDto> recipiants =new ArrayList<>();
+										recipiants.add(RecipiantDto.builder().lessorAccountNumber(e.getLessorAccountNumber())
+												.lessorBankName(e.getLessorBankName())
+												.lessorBranchName(e.getLessorBranchName())
+												.lessorIfscNumber(e.getLessorIfscNumber())
+												.lessorRecipiantsName(e.getLessorRecipiantsName())
+												.lessorRentAmount(e.getLessorRentAmount()).panNo(e.getLessorPanNumber())
+												.build());
+										responceData.setRecipiants(recipiants);
 										return responceData;
 									}))
 							.msg("Branch Details").build());
@@ -338,7 +348,9 @@ public class RentController {
 	}
 
 	/**
-	 * EDIT CONTRACT -> IF RENTEND DATE CHANGED -> RENT DUE ALL RECALCULATE BASE ON UPDATED RENT END DATA..! 
+	 * EDIT CONTRACT -> IF RENTEND DATE CHANGED -> RENT DUE ALL RECALCULATE BASE ON
+	 * UPDATED RENT END DATA..!
+	 * 
 	 * @param uniqueID
 	 * @param contractDto
 	 * @return
@@ -349,8 +361,8 @@ public class RentController {
 		RentContract rentContract = rentContractRepository.findById(uniqueID).get();
 		boolean flagCheck = false; // its false don't calculate Due..!
 		if (!rentContract.getRentStartDate().toString().equalsIgnoreCase(contractDto.getRentStartDate().toString())
-				|| !rentContract.getRentEndDate().toString()
-						.equalsIgnoreCase(contractDto.getRentEndDate().toString())|| contractDto.getLessorRentAmount()!=rentContract.getLessorRentAmount()) {
+				|| !rentContract.getRentEndDate().toString().equalsIgnoreCase(contractDto.getRentEndDate().toString())
+				|| contractDto.getLessorRentAmount() != rentContract.getLessorRentAmount()) {
 			List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
 			unusedDueData.stream().forEach(due -> {
 				dueRepository.delete(due);
@@ -387,7 +399,9 @@ public class RentController {
 				contractInfos.add(contractDto);
 			});
 			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
-					.msg("All Contracts Details fetch..!").data(contractInfos).build());
+					.msg("All Contracts Details fetch..!").data(contractInfos.stream()
+							.sorted(Comparator.comparing(RentContractDto::getUniqueID)).collect(Collectors.toList()))
+					.build());
 		}
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().error(Boolean.TRUE).msg("Contracts Data Not present..!").data(null).build());
@@ -444,6 +458,7 @@ public class RentController {
 
 	/**
 	 * GET ALL CONTRACT BASE ON DISTRICT NAME.
+	 * 
 	 * @param district
 	 * @return
 	 */
