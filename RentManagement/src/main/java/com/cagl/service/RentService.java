@@ -9,7 +9,6 @@ import com.cagl.dto.MakeActualDto;
 import com.cagl.dto.Responce;
 import com.cagl.dto.provisionDto;
 
-@Service
 public interface RentService {
 
 	Map<String, String> makeactual(List<MakeActualDto> actualDto);

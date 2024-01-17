@@ -291,6 +291,8 @@ public class RentController {
 									.reduce((first, second) -> second).map(e -> {
 										RentContractDto responceData = new RentContractDto();
 										BeanUtils.copyProperties(e, responceData);
+										responceData.setRentStartDate(e.getRentEndDate().plusDays(1));
+										responceData.setRentEndDate(e.getRentEndDate().plusDays(1).plusMonths(11));
 										return responceData;
 									}))
 							.msg("Branch Details").build());
@@ -348,7 +350,7 @@ public class RentController {
 		boolean flagCheck = false; // its false don't calculate Due..!
 		if (!rentContract.getRentStartDate().toString().equalsIgnoreCase(contractDto.getRentStartDate().toString())
 				|| !rentContract.getRentEndDate().toString()
-						.equalsIgnoreCase(contractDto.getRentEndDate().toString())) {
+						.equalsIgnoreCase(contractDto.getRentEndDate().toString())|| contractDto.getLessorRentAmount()!=rentContract.getLessorRentAmount()) {
 			List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
 			unusedDueData.stream().forEach(due -> {
 				dueRepository.delete(due);
