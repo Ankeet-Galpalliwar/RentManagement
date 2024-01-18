@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -17,7 +18,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -190,6 +190,13 @@ public class RentController {
 	public ResponseEntity<Responce> getprovision(@RequestParam String flag, @RequestParam String year) {
 		Responce responce = rentService.getprovision(flag, year);
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
+	}
+
+	@GetMapping("/getenure")
+	public ResponseEntity<Long> getTenure(@RequestParam String startDate, @RequestParam String EndDate) {
+		long tenure = ChronoUnit.MONTHS.between(LocalDate.parse(startDate, DateTimeFormatter.ISO_DATE),
+				LocalDate.parse(EndDate, DateTimeFormatter.ISO_DATE));
+		return ResponseEntity.status(HttpStatus.OK).body((tenure + 1));
 	}
 
 	/**
