@@ -188,10 +188,8 @@ public class RentController {
 	 */
 	@GetMapping("/getprovision")
 	public ResponseEntity<Responce> getprovision(@RequestParam String flag, @RequestParam String year) {
-
 		Responce responce = rentService.getprovision(flag, year);
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(responce).error(Boolean.FALSE).msg("All provision").build());
+		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
 
 	/**
@@ -206,8 +204,7 @@ public class RentController {
 			@RequestParam String year) {
 
 		Responce responce = rentService.getPaymentReport(contractID, month, year);
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(responce).error(Boolean.FALSE).msg("Payment Report Data..!").build());
+		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
 
 	@GetMapping("getduereportUid") // Base on UniqueID
@@ -294,14 +291,15 @@ public class RentController {
 										BeanUtils.copyProperties(e, responceData);
 										responceData.setRentStartDate(e.getRentEndDate().plusDays(1));
 										responceData.setRentEndDate(e.getRentEndDate().plusMonths(11));
-										List<RecipiantDto> recipiants =new ArrayList<>();
-										recipiants.add(RecipiantDto.builder().lessorAccountNumber(e.getLessorAccountNumber())
-												.lessorBankName(e.getLessorBankName())
-												.lessorBranchName(e.getLessorBranchName())
-												.lessorIfscNumber(e.getLessorIfscNumber())
-												.lessorRecipiantsName(e.getLessorRecipiantsName())
-												.lessorRentAmount(e.getLessorRentAmount()).panNo(e.getLessorPanNumber())
-												.build());
+										List<RecipiantDto> recipiants = new ArrayList<>();
+										recipiants.add(
+												RecipiantDto.builder().lessorAccountNumber(e.getLessorAccountNumber())
+														.lessorBankName(e.getLessorBankName())
+														.lessorBranchName(e.getLessorBranchName())
+														.lessorIfscNumber(e.getLessorIfscNumber())
+														.lessorRecipiantsName(e.getLessorRecipiantsName())
+														.lessorRentAmount(e.getLessorRentAmount())
+														.panNo(e.getLessorPanNumber()).build());
 										responceData.setRecipiants(recipiants);
 										return responceData;
 									}))
@@ -405,7 +403,6 @@ public class RentController {
 		}
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().error(Boolean.TRUE).msg("Contracts Data Not present..!").data(null).build());
-
 	}
 
 	/**
