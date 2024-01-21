@@ -36,6 +36,7 @@ import com.cagl.dto.Rentduecalculation;
 import com.cagl.dto.Responce;
 import com.cagl.dto.RfBranchmasterDto;
 import com.cagl.dto.SDRecoardDto;
+import com.cagl.dto.TenureDto;
 import com.cagl.dto.provisionDto;
 import com.cagl.entity.BranchDetail;
 import com.cagl.entity.IfscMaster;
@@ -101,7 +102,7 @@ public class RentController {
 	public ResponseEntity<Responce> getState() {
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce
-						.builder().data(rentContractRepository.findAll().stream().map(e -> e.getLesseeState())
+						.builder().data(rentContractRepository.findAll().stream().map(e -> e.getLesseeState()).sorted()
 								.distinct().collect(Collectors.toList()))
 						.error(Boolean.FALSE).msg("Get All State").build());
 	}
@@ -125,9 +126,9 @@ public class RentController {
 	@GetMapping("getBranchName")
 	public ResponseEntity<Responce> getBranchNames() {
 		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce
-						.builder().data(rentContractRepository.findAll().stream().map(e -> e.getLesseeBranchName())
-								.distinct().collect(Collectors.toList()))
+				.body(Responce.builder()
+						.data(rentContractRepository.findAll().stream().map(e -> e.getLesseeBranchName()).distinct()
+								.sorted().collect(Collectors.toList()))
 						.error(Boolean.FALSE).msg("All Brannches").build());
 	}
 
@@ -192,11 +193,12 @@ public class RentController {
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
 
-	@GetMapping("/getenure")
-	public ResponseEntity<Long> getTenure(@RequestParam String startDate, @RequestParam String EndDate) {
-		long tenure = ChronoUnit.MONTHS.between(LocalDate.parse(startDate, DateTimeFormatter.ISO_DATE),
-				LocalDate.parse(EndDate, DateTimeFormatter.ISO_DATE));
-		return ResponseEntity.status(HttpStatus.OK).body((tenure + 1));
+	@PostMapping("/getenure")
+	public ResponseEntity<List<Long>> getTenure(@RequestBody TenureDto data) {
+		long tenure = ChronoUnit.MONTHS.between(data.getStartDate(), data.getEndDate())+1;
+		ArrayList<Long> tenuredata = new ArrayList<Long>();
+		tenuredata.add(tenure);							
+		return ResponseEntity.status(HttpStatus.OK).body(tenuredata);
 	}
 
 	/**
@@ -626,10 +628,11 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setFebruary((int) Math
 										.round((monthlyRent / day) * ((day - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setFebruary((int) Math.round((monthlyRent / day) * rentEndDate.getDayOfMonth()));
-							else
+							else 
 								due.setFebruary((int) Math.round(monthlyRent));
+							
 						}
 						break;
 					case 3:
@@ -647,7 +650,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setMarch((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setMarch((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setMarch((int) Math.round(monthlyRent));
@@ -670,7 +673,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setApril((int) Math
 										.round((monthlyRent / 30) * ((30 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setApril((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
 							else
 								due.setApril((int) Math.round(monthlyRent));
@@ -692,7 +695,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setMay((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setMay((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setMay((int) Math.round(monthlyRent));
@@ -714,7 +717,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setJune((int) Math
 										.round((monthlyRent / 30) * ((30 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setJune((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
 							else
 								due.setJune((int) Math.round(monthlyRent));
@@ -736,7 +739,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setJuly((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setJuly((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setJuly((int) Math.round(monthlyRent));
@@ -757,7 +760,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setAugust((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setAugust((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setAugust((int) Math.round(monthlyRent));
@@ -778,7 +781,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setSeptember((int) Math
 										.round((monthlyRent / 30) * ((30 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setSeptember((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
 							else
 								due.setSeptember((int) Math.round(monthlyRent));
@@ -800,7 +803,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setOctober((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setOctober((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setOctober((int) Math.round(monthlyRent));
@@ -822,7 +825,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setNovember((int) Math
 										.round((monthlyRent / 30) * ((30 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setNovember((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
 							else
 								due.setNovember((int) Math.round(monthlyRent));
@@ -851,7 +854,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setDecember((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue())
+							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
 								due.setDecember((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setDecember((int) Math.round(monthlyRent));

@@ -3,21 +3,19 @@ package com.cagl.dto;
 import java.time.LocalDate;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class MakeActualDto {
+public class TenureDto {
 
-	private int contractID;
-	private String branchID;
-	private String month;
-	private int year;
-	private double amount;
 	private LocalDate startDate;
 	private LocalDate endDate;
+
 }

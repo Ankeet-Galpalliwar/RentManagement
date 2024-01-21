@@ -134,7 +134,7 @@ public class RentServiceImpl implements RentService {
 					String ActualUpdateQuery = "update payment_report set actual_amount=" + Data.getAmount()
 							+ " where id='" + Data.getContractID() + "-" + Data.getMonth() + "/" + Data.getYear() + "'";
 					jdbcTemplate1.update(ActualUpdateQuery);
-					responce.put(Data.getContractID() + "", "PAID");
+					responce.put(Data.getContractID() + "", "PAID:-"+Data.getAmount());
 				}
 			});
 		}
