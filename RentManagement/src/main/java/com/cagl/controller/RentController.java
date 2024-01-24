@@ -18,7 +18,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -64,6 +67,7 @@ import com.cagl.service.impl.RentServiceImpl;
  *
  */
 @RestController
+@Component
 @CrossOrigin(origins = "*")
 public class RentController {
 
@@ -141,7 +145,7 @@ public class RentController {
 					.error(Boolean.TRUE).msg(" Cant't make SD provision Already Exist").build());
 
 		RentContract rentContract = rentContractRepository.findById(sdrecord.getContractID()).get();
-		// If month Year not match Send conflict Error in responce
+		// If month Year not match Send conflict Error in ResponSe
 		if (!(rentContract.getRentEndDate().getMonth() + "").equalsIgnoreCase(sdrecord.getMonth())
 				|| !(rentContract.getRentEndDate().getYear() + "").equalsIgnoreCase(sdrecord.getYear() + "")) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(null).error(Boolean.TRUE)
@@ -190,14 +194,26 @@ public class RentController {
 	@GetMapping("/getprovision")
 	public ResponseEntity<Responce> getprovision(@RequestParam String flag, @RequestParam String year) {
 		Responce responce = rentService.getprovision(flag, year);
+
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
+	}
+
+	@DeleteMapping("deleteProvision")
+	public String deleteProvision(@RequestParam String provisionID) {
+		try {
+			provisionRepository.deleteById(provisionID);
+			return "PROVISION DELETION DONE";
+		} catch (Exception e) {
+			return "PROVISION DELETION FAILED";
+		}
+
 	}
 
 	@PostMapping("/getenure")
 	public ResponseEntity<List<Long>> getTenure(@RequestBody TenureDto data) {
-		long tenure = ChronoUnit.MONTHS.between(data.getStartDate(), data.getEndDate())+1;
+		long tenure = ChronoUnit.MONTHS.between(data.getStartDate(), data.getEndDate()) + 1;
 		ArrayList<Long> tenuredata = new ArrayList<Long>();
-		tenuredata.add(tenure);							
+		tenuredata.add(tenure);
 		return ResponseEntity.status(HttpStatus.OK).body(tenuredata);
 	}
 
@@ -252,25 +268,20 @@ public class RentController {
 	}
 
 	@GetMapping("getbranchdetails")
-	public ResponseEntity<Responce> getBranchDetails(@RequestParam String BranchID, @RequestParam String type) {
+	public ResponseEntity<Responce> getBranchDetails(@RequestParam String BranchID) {
 
-		if (type.toUpperCase().startsWith("RF")) {
-			Optional<RfBranchMaster> data = rfBrachRepository.findById(BranchID);
-			if (data.isPresent()) {
-				RfBranchMaster rfBranchMaster = data.get();
-				RfBranchmasterDto build = RfBranchmasterDto.builder()
-						.amContactNumber(rfBranchMaster.getAmContactNumber()).areaName(rfBranchMaster.getAreaName())
-						.branchName(rfBranchMaster.getBranchName()).region(rfBranchMaster.getRegion())
-						.rfBranchID(rfBranchMaster.getRfBranchID()).build();
-				return ResponseEntity.status(HttpStatus.OK)
-						.body(Responce.builder().error(Boolean.FALSE).data(build).msg("Data present..!").build());
-			}
+		Optional<RfBranchMaster> rfdata = rfBrachRepository.findById(BranchID);
+		if (rfdata.isPresent()) {
+			RfBranchMaster rfBranchMaster = rfdata.get();
+			RfBranchmasterDto build = RfBranchmasterDto.builder().amContactNumber(rfBranchMaster.getAmContactNumber())
+					.areaName(rfBranchMaster.getAreaName()).branchName(rfBranchMaster.getBranchName())
+					.region(rfBranchMaster.getRegion()).rfBranchID(rfBranchMaster.getRfBranchID()).build();
 			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().error(Boolean.TRUE).data(null).msg("RF Data Not Present..!").build());
-		} else if (type.toUpperCase().startsWith("GL")) {
-			Optional<BranchDetail> data = branchDetailRepository.findById(BranchID);
-			if (data.isPresent()) {
-				BranchDetail branchDetail = data.get();
+					.body(Responce.builder().error(Boolean.FALSE).data(build).msg("Data present..!").build());
+		} else {
+			Optional<BranchDetail> glData = branchDetailRepository.findById(BranchID);
+			if (glData.isPresent()) {
+				BranchDetail branchDetail = glData.get();
 				BranchDto build = BranchDto.builder().areaName(branchDetail.getAreaName())
 						.branchID(branchDetail.getBranchID()).branchName(branchDetail.getBranchName())
 						.region(branchDetail.getRegion()).state(branchDetail.getState()).zone(branchDetail.getZone())
@@ -278,13 +289,9 @@ public class RentController {
 				return ResponseEntity.status(HttpStatus.OK)
 						.body(Responce.builder().data(build).msg("Branch Data Exist...!").error(Boolean.FALSE).build());
 			}
-			return ResponseEntity.status(HttpStatus.OK).body(
-					Responce.builder().data(null).msg("GL Branch Data Not Exist...!").error(Boolean.TRUE).build());
-		} else {
-			return ResponseEntity.status(HttpStatus.OK).body(
-					Responce.builder().data(new ArrayList<>()).msg("Data Not Exist...!").error(Boolean.TRUE).build());
+			return ResponseEntity.status(HttpStatus.OK)
+					.body(Responce.builder().data(null).msg("Branch Data Not Exist...!").error(Boolean.TRUE).build());
 		}
-
 	}
 
 	@GetMapping("renewalDetails")
@@ -528,30 +535,31 @@ public class RentController {
 	}
 
 	// =======MODIFY PAYMENTREPORT TABLE AT 12PM EVERY NIGHT=================
-	@PostMapping("/ModifyPaymentReport")
-	public ResponseEntity<Responce> modifyPaymentReport(@RequestParam String month, @RequestParam String year)
-			throws NumberFormatException, ParseException {
+//	@PostMapping("/ModifyPaymentReport")
+	@Scheduled(cron = "0 30 21 * * ?")
+//	@RequestParam String month, @RequestParam String year
+	public ResponseEntity<Responce> modifyPaymentReport() throws ParseException {
 
 		// To avoid unused contract object flag date is use in Query.
-		LocalDate flagDate = getFlagDate(month, Integer.parseInt(year), "Start");// (Start-> to get Start Date of
+		LocalDate flagDate = getFlagDate(LocalDate.now().getMonth() + "", LocalDate.now().getYear(), "Start");
 		List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
 		RentServiceImpl obj = new RentServiceImpl();
 		if (getcontractIDs != null & !getcontractIDs.isEmpty())
 			getcontractIDs.stream().forEach(cID -> {
-				PaymentReportDto generatePaymentreport = obj.generatePaymentreport(cID, month, year);
+				PaymentReportDto generatePaymentreport = obj.generatePaymentreport(cID, LocalDate.now().getMonth() + "",
+						LocalDate.now().getYear() + "");
 				if (generatePaymentreport != null) {
 					paymentReportRepository.save(PaymentReport.builder()
 							.branchID(generatePaymentreport.getInfo().getBranchID()).contractID(cID)
 							.due(generatePaymentreport.getDue()).Gross(generatePaymentreport.getGross())
-							.ID(cID + "-" + generatePaymentreport.getMonthYear()).month(month)
+							.ID(cID + "-" + generatePaymentreport.getMonthYear()).month(LocalDate.now().getMonth() + "")
 							.monthlyRent(generatePaymentreport.getMonthlyRent()).net(generatePaymentreport.getNet())
 							.provision(generatePaymentreport.getProvision())
 							.ActualAmount(generatePaymentreport.getActualAmount()).tds(generatePaymentreport.getTds())
-							.GST(generatePaymentreport.getGstamt()).year(year).build());
+							.GST(generatePaymentreport.getGstamt()).year(LocalDate.now().getYear() + "").build());
 				}
 			});
 		return null;// return null to Exit..!
-
 	}
 
 	// ======================DUE CLCULATION LOGIC==========================
@@ -583,7 +591,11 @@ public class RentController {
 			due.setEndDate(rentEndDate);
 
 			if (y == startYear) {
-				for (int m = rentStartDate.getMonthValue(); m <= 12; m++) {
+				int monthValue = 12;
+				if (rentEndDate.getYear() == rentStartDate.getYear()) {
+					monthValue = rentEndDate.getMonthValue();
+				}
+				for (int m = rentStartDate.getMonthValue(); m <= monthValue; m++) {
 					switch (m) {
 					case 1:
 						if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()
@@ -628,11 +640,11 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setFebruary((int) Math
 										.round((monthlyRent / day) * ((day - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setFebruary((int) Math.round((monthlyRent / day) * rentEndDate.getDayOfMonth()));
-							else 
+							else
 								due.setFebruary((int) Math.round(monthlyRent));
-							
+
 						}
 						break;
 					case 3:
@@ -650,7 +662,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setMarch((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setMarch((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setMarch((int) Math.round(monthlyRent));
@@ -673,7 +685,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setApril((int) Math
 										.round((monthlyRent / 30) * ((30 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setApril((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
 							else
 								due.setApril((int) Math.round(monthlyRent));
@@ -695,7 +707,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setMay((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setMay((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setMay((int) Math.round(monthlyRent));
@@ -717,7 +729,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setJune((int) Math
 										.round((monthlyRent / 30) * ((30 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setJune((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
 							else
 								due.setJune((int) Math.round(monthlyRent));
@@ -739,7 +751,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setJuly((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setJuly((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setJuly((int) Math.round(monthlyRent));
@@ -760,7 +772,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setAugust((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setAugust((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setAugust((int) Math.round(monthlyRent));
@@ -781,7 +793,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setSeptember((int) Math
 										.round((monthlyRent / 30) * ((30 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setSeptember((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
 							else
 								due.setSeptember((int) Math.round(monthlyRent));
@@ -803,7 +815,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setOctober((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setOctober((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setOctober((int) Math.round(monthlyRent));
@@ -825,7 +837,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setNovember((int) Math
 										.round((monthlyRent / 30) * ((30 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setNovember((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
 							else
 								due.setNovember((int) Math.round(monthlyRent));
@@ -854,7 +866,7 @@ public class RentController {
 							if (m == rentStartDate.getMonthValue())
 								due.setDecember((int) Math
 										.round((monthlyRent / 31) * ((31 - rentStartDate.getDayOfMonth()) + 1)));
-							else if (m == rentEndDate.getMonthValue()&y==rentEndDate.getYear())
+							else if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear())
 								due.setDecember((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
 							else
 								due.setDecember((int) Math.round(monthlyRent));

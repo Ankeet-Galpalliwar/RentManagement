@@ -255,15 +255,17 @@ public class RentServiceImpl implements RentService {
 		String strprovision = provisionRepository.getProvision(contractID, year + "", month);
 		if (strprovision != null) {
 			if (strprovision.startsWith("-"))
-				DueValue = Double.parseDouble(strprovision) * -1;
+//				DueValue = Double.parseDouble(strprovision) * -1;
+			provision = Double.parseDouble(strprovision);
 			else
 				provision = Double.parseDouble(strprovision);
 		}
 		RentContractDto info = new RentContractDto();
+		RentContract rentContract =null;
 
 		try {
 			// ---------Contract Info---------------
-			RentContract rentContract = rentContractRepository.findById(Integer.parseInt(contractID)).get();
+			rentContract = rentContractRepository.findById(Integer.parseInt(contractID)).get();
 			BeanUtils.copyProperties(rentContract, info);
 
 			// -------Calculate DUE-----------------
@@ -323,7 +325,7 @@ public class RentServiceImpl implements RentService {
 		} catch (Exception e) {
 			System.out.println(e + "---------Exception---------");
 		}
-		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(MonthRent).net(Net)
+		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(rentContract.getLessorRentAmount()).net(Net)
 				.provision(provision).tds(tds).sdAmount(sdAmount).actualAmount(ActualAmount).gstamt(Gst)
 				.monthYear(month + "/" + year).build();
 	}
