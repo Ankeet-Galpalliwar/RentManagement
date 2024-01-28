@@ -10,7 +10,7 @@ import com.cagl.entity.provision;
 
 public interface provisionRepository extends JpaRepository<provision, String> {
 
-	@Query(value = "SELECT sum(provision_amount) FROM provision where contractid=:contractID and flag<:flag", nativeQuery = true)
+	@Query(value = "SELECT sum(provision_amount) FROM provision where contractid=:contractID and flag<=:flag", nativeQuery = true)
 	public String getoverallprovisioin(@Param("contractID") String contractID, @Param("flag") String flag);
 	
 	
@@ -21,6 +21,9 @@ public interface provisionRepository extends JpaRepository<provision, String> {
 	
 	@Query(value = "SELECT * FROM provision where contractid=:flag and year=:year", nativeQuery =true)
 	public List<provision> getprovion(@Param("flag")String flag,@Param("year") String year);
+
+
+	public provision findByContractIDAndYearAndMonth(String contractID, int year, String month);
 
 	
 

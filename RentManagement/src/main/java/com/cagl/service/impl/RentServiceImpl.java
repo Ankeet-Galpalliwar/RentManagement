@@ -3,8 +3,6 @@ package com.cagl.service.impl;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.Year;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -16,8 +14,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -25,13 +21,12 @@ import org.springframework.stereotype.Service;
 import com.cagl.dto.MakeActualDto;
 import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RentContractDto;
-import com.cagl.dto.Rentduecalculation;
 import com.cagl.dto.Responce;
 import com.cagl.dto.provisionDto;
 import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RentContract;
-import com.cagl.entity.RentDue;
 import com.cagl.entity.SDRecords;
+import com.cagl.entity.Variance;
 import com.cagl.entity.provision;
 import com.cagl.entity.rentActual;
 import com.cagl.repository.BranchDetailRepository;
@@ -43,7 +38,10 @@ import com.cagl.repository.SDRecoardRepository;
 import com.cagl.repository.ifscMasterRepository;
 import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
+import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
+
+import lombok.experimental.var;
 
 @Service
 public class RentServiceImpl implements RentService {
@@ -76,6 +74,9 @@ public class RentServiceImpl implements RentService {
 	SDRecoardRepository sdRepository;
 
 	@Autowired
+	varianceRepository varianceRepository;
+
+	@Autowired
 	private NamedParameterJdbcTemplate jdbcTemplate;
 
 	@Autowired
@@ -89,8 +90,7 @@ public class RentServiceImpl implements RentService {
 			if (data != null) {
 				data.stream().forEach(e -> {
 					RentContractDto rentContractDto = new RentContractDto();
-					BeanUtils.copyProperties(rentContractRepository.findById(Integer.parseInt(e.getContractID())).get(),
-							rentContractDto);
+					BeanUtils.copyProperties(e.getContractInfo(), rentContractDto);
 					prDto.add(PaymentReportDto.builder().actualAmount(e.getActualAmount()).due(e.getDue())
 							.Gross(e.getGross()).gstamt(e.getGST()).Info(rentContractDto)
 							.monthlyRent(e.getMonthlyRent()).monthYear(e.getMonth() + "/" + e.getYear()).net(e.getNet())
@@ -102,6 +102,7 @@ public class RentServiceImpl implements RentService {
 			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year);
 			// Here we are saving(Generated Payment Report) Data for audit purpose.
 			paymentReportRepository.save(PaymentReport.builder().branchID(generatereport.getInfo().getBranchID())
+					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
 					.contractID(contractID).due(generatereport.getDue()).Gross(generatereport.getGross())
 					.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
 					.monthlyRent(generatereport.getMonthlyRent()).net(generatereport.getNet())
@@ -113,8 +114,9 @@ public class RentServiceImpl implements RentService {
 
 	@Override
 	public Map<String, String> makeactual(List<MakeActualDto> actualDto) {
-		Map<String, String> responce = new HashMap<>();
+		Map<String, String> responce = new HashMap<>();// use for response
 		if (!actualDto.isEmpty() & actualDto != null) {
+			// Get on by one Actual Data
 			actualDto.stream().forEach(Data -> {
 				String ActualID = Data.getContractID() + "-" + Data.getYear();
 				Optional<rentActual> actualData = actualRepository.findById(ActualID);
@@ -124,6 +126,7 @@ public class RentServiceImpl implements RentService {
 							.ContractID(Data.getContractID()).BranchID(Data.getBranchID()).endDate(Data.getEndDate())
 							.startDate(Data.getStartDate()).year(Data.getYear()).rentActualID(ActualID).build());
 				}
+
 				String query = "update rent_actual set " + Data.getMonth() + "=" + Data.getAmount()
 						+ " where rent_actualid='" + ActualID + "'";
 				jdbcTemplate1.execute("SET SQL_SAFE_UPDATES = 0");
@@ -134,7 +137,31 @@ public class RentServiceImpl implements RentService {
 					String ActualUpdateQuery = "update payment_report set actual_amount=" + Data.getAmount()
 							+ " where id='" + Data.getContractID() + "-" + Data.getMonth() + "/" + Data.getYear() + "'";
 					jdbcTemplate1.update(ActualUpdateQuery);
-					responce.put(Data.getContractID() + "", "PAID:-"+Data.getAmount());
+
+					// ----Modify Variance-----{BASE ON ACTUALAMOUNT)
+					Optional<Variance> optationaVariance = varianceRepository
+							.findById(Data.getContractID() + "-" + Data.getMonth() + "-" + Data.getYear());
+					if (optationaVariance.isPresent())
+						varianceRepository.delete(optationaVariance.get());
+
+					if ((Data.getMonthlyRent() - Data.getAmount()) != 0.0) {
+						try {
+							varianceRepository.save(Variance.builder().branchID(Data.getBranchID())
+									.contractID(Data.getContractID() + "")
+									.contractInfo(rentContractRepository.findById(Data.getContractID()).get())
+									.dateTime(LocalDate.now())
+									.flag(getFlagDate(Data.getMonth(), Data.getYear(), "start")).month(Data.getMonth())
+									.remark(null).varianceAmount(Data.getMonthlyRent() - Data.getAmount())
+									.varianceID(Data.getContractID() + "-" + Data.getMonth() + "-" + Data.getYear())
+									.year(Data.getYear()).build());
+							// Payment Report Generated -> update Table
+							getPaymentReport(Data.getContractID() + "", Data.getMonth(), Data.getYear() + "");
+						} catch (ParseException e) {
+							e.printStackTrace();
+						}
+					}
+					// -------------------
+					responce.put(Data.getContractID() + "", "PAID:-" + Data.getAmount());
 				}
 			});
 		}
@@ -151,7 +178,7 @@ public class RentServiceImpl implements RentService {
 		provision.setDateTime(LocalDate.now());
 		provision.setProvisiontype(provisionType);
 		provision.setProvisionID(
-				provisionDto.getContractID() + "-" + provisionDto.getMonth() + "/" + provisionDto.getYear());
+				provisionDto.getContractID() + "-" + provisionDto.getMonth() + "-" + provisionDto.getYear());
 		// Flag Value is use only for to generate Payment report.
 		try {
 			provision.setFlag(getFlagDate(provisionDto.getMonth(), provisionDto.getYear(), "start"));
@@ -161,7 +188,7 @@ public class RentServiceImpl implements RentService {
 		provision save = provisionRepository.save(provision);
 		if (save != null) {
 			// once provision make Payment data updated if Exist or else its create new one.
-			generatePaymentreport(provisionDto.getContractID(), provisionDto.getMonth(), provisionDto.getYear() + "");
+			getPaymentReport(provisionDto.getContractID(), provisionDto.getMonth(), provisionDto.getYear() + "");
 		}
 		BeanUtils.copyProperties(save, provisionDto);
 
@@ -215,7 +242,6 @@ public class RentServiceImpl implements RentService {
 	 * @return -> Amount or 0(Zero)
 	 */
 	public List<String> getvalue(String sqlQuery) {
-
 		return jdbcTemplate.query(sqlQuery, (resultSet, rowNum) -> {
 			if (resultSet != null)
 				return resultSet.getString(1);
@@ -252,16 +278,8 @@ public class RentServiceImpl implements RentService {
 		double ActualAmount = 0.0;
 		double sdAmount = 0.0;
 
-		String strprovision = provisionRepository.getProvision(contractID, year + "", month);
-		if (strprovision != null) {
-			if (strprovision.startsWith("-"))
-//				DueValue = Double.parseDouble(strprovision) * -1;
-			provision = Double.parseDouble(strprovision);
-			else
-				provision = Double.parseDouble(strprovision);
-		}
 		RentContractDto info = new RentContractDto();
-		RentContract rentContract =null;
+		RentContract rentContract = null;
 
 		try {
 			// ---------Contract Info---------------
@@ -277,24 +295,26 @@ public class RentServiceImpl implements RentService {
 			 * @To get Monthly Rent Logic has Written At starting of method -> for Handle
 			 * Error!
 			 */
-
 			if (overallprovisioin != null) {
 				// -----------provision value Initiate-----------------overall active base on
 				// overall active base on date provision sum ...!
 				provision += Double.parseDouble(overallprovisioin);
-
-				DueValue += Double.parseDouble(overallprovisioin) + MonthRent;
-			} else
-				DueValue += MonthRent;
-
+			}
+			DueValue += MonthRent;
+			// ----------initiate Variance on DueValue---------
+			String overAllVariance = varianceRepository.getoverallvariance(contractID, flagDate + "");
+			if (overAllVariance != null) {
+				DueValue += Double.parseDouble(overAllVariance);
+			}
 			// ----------Gross Value initiate---------
 			gross = DueValue - provision;
 
-			Optional<SDRecords> sdOptional = sdRepository.findById(contractID + "-" + month + "/" + year);
-			if (sdOptional != null & sdOptional.isPresent()) {
-				gross = gross - sdOptional.get().getSdAmount();
-				sdAmount = sdOptional.get().getSdAmount();
-			}
+			// ---------- SD Value initiate ---------
+//			Optional<SDRecords> sdOptional = sdRepository.findById(contractID + "-" + month + "/" + year);
+//			if (sdOptional != null & sdOptional.isPresent()) {
+//				gross = gross - sdOptional.get().getSdAmount();
+//				sdAmount = sdOptional.get().getSdAmount();
+//			}
 
 			// ----------TDS Value initiate---------
 			double overallTDSValue = 0.0;
@@ -325,7 +345,7 @@ public class RentServiceImpl implements RentService {
 		} catch (Exception e) {
 			System.out.println(e + "---------Exception---------");
 		}
-		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(rentContract.getLessorRentAmount()).net(Net)
+		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(MonthRent).net(Net)
 				.provision(provision).tds(tds).sdAmount(sdAmount).actualAmount(ActualAmount).gstamt(Gst)
 				.monthYear(month + "/" + year).build();
 	}

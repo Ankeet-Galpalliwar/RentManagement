@@ -6,19 +6,22 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class MakeActualDto {
+public class varianceDto {
 
-	private int contractID;
+	
+	private String varianceID;
 	private String branchID;
-	private String month;
+	private String contractID;
 	private int year;
-	private double amount;
-	private LocalDate startDate;
-	private LocalDate endDate;
-	private double monthlyRent;
+	private String month;
+	private double varianceAmount;
+	private String remark;
+	private LocalDate dateTime;
+	private LocalDate flag;
+	
+	private RentContractDto info;
 }

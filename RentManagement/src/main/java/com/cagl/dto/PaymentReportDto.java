@@ -23,4 +23,5 @@ public class PaymentReportDto {
 	private String monthYear;
 	private RentContractDto Info;
 	
+	
 }

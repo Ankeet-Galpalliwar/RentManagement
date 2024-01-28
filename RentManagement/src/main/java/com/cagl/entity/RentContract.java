@@ -1,12 +1,11 @@
 package com.cagl.entity;
 
 import java.time.LocalDate;
+import java.util.List;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -108,10 +107,6 @@ public class RentContract {
 	private LocalDate agreementEndDate;
 	private LocalDate rentStartDate;
 	private LocalDate rentEndDate;
-//	private LocalDate firstRentDate;
-//	private LocalDate lastRentDate;
-//	private LocalDate agreementRefreshStartDate;
-//	private LocalDate agreementRefreshEndDate;
 	private String maintaineneCharge;
 	private String waterCharge;
 	private String electricity;
@@ -121,14 +116,11 @@ public class RentContract {
 	
 	private int securityDepositAmount;
 	private LocalDate securityDepositPaymentDate;
-//	private String securityDepositPaymentMode;
 	private String securityDepositUtr;
 	private String securityDepositLockinPeriod;
 	private String securityDepositnoticePeriod;
 	private String securityDepositExitTerm;
 	private int standardDeducition;
-//	private int firstMonthvalue;
-//	private int lastMonthvalue;
 	
 	// Recipiants Details
 	private String lessorRecipiantsName;
@@ -141,20 +133,15 @@ public class RentContract {
 	private double lessorRentAmount;
 	
 	
-//	private String rentAmount;
 	private String escalation;
 	private String tds;
 	private String gst;
-//	private String renewalTenure;
 	
 	private String lattitude;
 	private String longitude;
 	private String gpsCoordinates;
 	
 	private double monthlyRent;
-//	private int remainingDays;
-//	private String renewalStatus;
-//	private String rentContractStatus;
 	
 	
 	//document path 
@@ -163,9 +150,9 @@ public class RentContract {
 	private String lessorBankPassBookPath;
 	private String panDocumentPath;
 	
-//	@OneToOne(mappedBy = "contract", cascade = CascadeType.)
-//	private SDRecords  records;
-//	@OneToMany( mappedBy = "rentContractRecipiant")
-//	private List<Recipiant> recipiants;
+	
+	@OneToMany(mappedBy = "contractInfo")
+//	@Exclude
+	private List<Variance> variances;
 
 }

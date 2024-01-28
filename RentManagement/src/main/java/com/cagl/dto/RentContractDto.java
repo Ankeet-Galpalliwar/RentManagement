@@ -155,5 +155,7 @@ public class RentContractDto {
 	
 //	@OneToMany( mappedBy = "rentContractRecipiant")
 	private List<RecipiantDto> recipiants;
+	
+	
 
 }

@@ -18,8 +18,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,6 +43,7 @@ import com.cagl.dto.RfBranchmasterDto;
 import com.cagl.dto.SDRecoardDto;
 import com.cagl.dto.TenureDto;
 import com.cagl.dto.provisionDto;
+import com.cagl.dto.varianceDto;
 import com.cagl.entity.BranchDetail;
 import com.cagl.entity.IfscMaster;
 import com.cagl.entity.PaymentReport;
@@ -48,6 +51,7 @@ import com.cagl.entity.RentContract;
 import com.cagl.entity.RentDue;
 import com.cagl.entity.RfBranchMaster;
 import com.cagl.entity.SDRecords;
+import com.cagl.entity.Variance;
 import com.cagl.entity.provision;
 import com.cagl.repository.BranchDetailRepository;
 import com.cagl.repository.PaymentReportRepository;
@@ -58,6 +62,7 @@ import com.cagl.repository.SDRecoardRepository;
 import com.cagl.repository.ifscMasterRepository;
 import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
+import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
 import com.cagl.service.impl.RentServiceImpl;
 
@@ -91,6 +96,29 @@ public class RentController {
 	SDRecoardRepository sdRepository;
 	@Autowired
 	RentService rentService;
+	@Autowired
+	varianceRepository varianceRepository;
+
+	@Autowired
+	JdbcTemplate jdbcTemplate;
+
+	@GetMapping("/getvariance")
+	public ResponseEntity<Responce> getvariance(@RequestParam String contractID) {
+		List<varianceDto> allvariDtos = new ArrayList<>();
+		List<Variance> allVariance = varianceRepository.findByContractID(contractID);
+		if (!allVariance.isEmpty() & allVariance != null) {
+			allVariance.stream().forEach(e -> {
+				varianceDto varianceDto = new varianceDto();
+				BeanUtils.copyProperties(e, varianceDto);
+				RentContractDto contractDto = new RentContractDto();
+				BeanUtils.copyProperties(e.getContractInfo(), contractDto);
+				varianceDto.setInfo(contractDto);
+				allvariDtos.add(varianceDto);
+			});
+		}
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(allvariDtos).error(Boolean.FALSE)
+				.msg("ALL variance [" + contractID + "]").build());
+	}
 
 	@GetMapping("ifscinfo")
 	public ResponseEntity<Responce> getIfscInfo(@RequestParam String ifscNumber) {
@@ -198,13 +226,41 @@ public class RentController {
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
 
+	@Transactional
 	@DeleteMapping("deleteProvision")
-	public String deleteProvision(@RequestParam String provisionID) {
+	public String deleteProvision(@RequestParam String contractID, @RequestParam int year, @RequestParam String month) {
 		try {
-			provisionRepository.deleteById(provisionID);
+			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) & LocalDate.now().getYear() != year)
+				throw new RuntimeException("ALLOWED ONLY FOR CURRENT MONTH&YEAR");
+			provision provision = provisionRepository.findByContractIDAndYearAndMonth(contractID, year, month);
+			provisionRepository.delete(provision);
+
+			String ActualUpdateQuery = "update payment_report set actual_amount=" + 0 + " where id='" + contractID + "-"
+					+ month + "/" + year + "'";
+			if (jdbcTemplate.update(ActualUpdateQuery) != 0) {
+				Optional<Variance> optationaVariance = varianceRepository
+						.findById(contractID + "-" + month + "-" + year);
+				if (optationaVariance.isPresent())
+					varianceRepository.delete(optationaVariance.get());
+			}
+
+			/**
+			 * -----Delete Record from Payment Report--- AFTER THAT
+			 * 
+			 * @ones We make Again Actual updated monthly report added
+			 *      in @Payment_Report_Table
+			 **/
+			paymentReportRepository.deleteById(contractID + "-" + month + "/" + year);
+
+			// ------Reset Actual Value---------
+			String actualID = contractID + "-" + year;
+			String query = "update rent_actual set " + month + "=" + 0 + " where rent_actualid='" + actualID + "'";
+			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
+			jdbcTemplate.update(query);
+
 			return "PROVISION DELETION DONE";
 		} catch (Exception e) {
-			return "PROVISION DELETION FAILED";
+			return "PROVISION DELETION FAILED" + "[ " + e.getMessage() + " ]";
 		}
 
 	}
@@ -218,7 +274,6 @@ public class RentController {
 	}
 
 	/**
-	 * 
 	 * @param contractID-> ALL AND CID(7000)
 	 * @param month
 	 * @param year
@@ -227,7 +282,6 @@ public class RentController {
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
 			@RequestParam String year) {
-
 		Responce responce = rentService.getPaymentReport(contractID, month, year);
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
@@ -438,7 +492,6 @@ public class RentController {
 		}
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(Responce.builder().data(null).error(Boolean.TRUE).msg("INCORRECT CONTRACT_ID.!").build());
-
 	}
 
 	/**
@@ -534,30 +587,21 @@ public class RentController {
 		return true;
 	}
 
-	// =======MODIFY PAYMENTREPORT TABLE AT 12PM EVERY NIGHT=================
-//	@PostMapping("/ModifyPaymentReport")
-	@Scheduled(cron = "0 30 21 * * ?")
+	// =======MODIFY PAYMENTREPORT TABLE AT 10:30(PM) EVERY NIGHT=================
+
+	@PostMapping("/ModifyPaymentReport")
+	@Scheduled(cron = "0 33 12 * * ?")
 //	@RequestParam String month, @RequestParam String year
 	public ResponseEntity<Responce> modifyPaymentReport() throws ParseException {
-
 		// To avoid unused contract object flag date is use in Query.
 		LocalDate flagDate = getFlagDate(LocalDate.now().getMonth() + "", LocalDate.now().getYear(), "Start");
 		List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
-		RentServiceImpl obj = new RentServiceImpl();
+//		RentServiceImpl ServiceImplObj = new RentServiceImpl();
 		if (getcontractIDs != null & !getcontractIDs.isEmpty())
 			getcontractIDs.stream().forEach(cID -> {
-				PaymentReportDto generatePaymentreport = obj.generatePaymentreport(cID, LocalDate.now().getMonth() + "",
-						LocalDate.now().getYear() + "");
-				if (generatePaymentreport != null) {
-					paymentReportRepository.save(PaymentReport.builder()
-							.branchID(generatePaymentreport.getInfo().getBranchID()).contractID(cID)
-							.due(generatePaymentreport.getDue()).Gross(generatePaymentreport.getGross())
-							.ID(cID + "-" + generatePaymentreport.getMonthYear()).month(LocalDate.now().getMonth() + "")
-							.monthlyRent(generatePaymentreport.getMonthlyRent()).net(generatePaymentreport.getNet())
-							.provision(generatePaymentreport.getProvision())
-							.ActualAmount(generatePaymentreport.getActualAmount()).tds(generatePaymentreport.getTds())
-							.GST(generatePaymentreport.getGstamt()).year(LocalDate.now().getYear() + "").build());
-				}
+				System.out.println("------" + cID + "------");
+				// HERE WE MODIFY PAYMENT REPORT
+				generatePaymentReport(cID, LocalDate.now().getMonth() + "", LocalDate.now().getYear() + "");
 			});
 		return null;// return null to Exit..!
 	}
