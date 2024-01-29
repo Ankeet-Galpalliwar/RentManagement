@@ -20,6 +20,7 @@ public class PaymentReportDto {
 	private double actualAmount;
 	private double sdAmount;
 	private double monthlyRent;
+//	private double initialRent;
 	private String monthYear;
 	private RentContractDto Info;
 	

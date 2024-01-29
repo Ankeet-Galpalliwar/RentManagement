@@ -3,6 +3,7 @@ package com.cagl.controller;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -33,7 +34,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.cagl.dto.BranchDto;
 import com.cagl.dto.MakeActualDto;
-import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RecipiantDto;
 import com.cagl.dto.RentContractDto;
 import com.cagl.dto.RentDueDto;
@@ -44,15 +44,16 @@ import com.cagl.dto.SDRecoardDto;
 import com.cagl.dto.TenureDto;
 import com.cagl.dto.provisionDto;
 import com.cagl.dto.varianceDto;
+import com.cagl.entity.ApiCallRecords;
 import com.cagl.entity.BranchDetail;
 import com.cagl.entity.IfscMaster;
-import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RentContract;
 import com.cagl.entity.RentDue;
 import com.cagl.entity.RfBranchMaster;
 import com.cagl.entity.SDRecords;
 import com.cagl.entity.Variance;
 import com.cagl.entity.provision;
+import com.cagl.repository.ApiCallRepository;
 import com.cagl.repository.BranchDetailRepository;
 import com.cagl.repository.PaymentReportRepository;
 import com.cagl.repository.RentActualRepository;
@@ -64,12 +65,9 @@ import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
 import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
-import com.cagl.service.impl.RentServiceImpl;
 
 /**
- * 
  * @author Ankeet G.
- *
  */
 @RestController
 @Component
@@ -98,7 +96,8 @@ public class RentController {
 	RentService rentService;
 	@Autowired
 	varianceRepository varianceRepository;
-
+	@Autowired
+	ApiCallRepository apirecords;
 	@Autowired
 	JdbcTemplate jdbcTemplate;
 
@@ -203,6 +202,7 @@ public class RentController {
 	@PostMapping("/setprovision")
 	public ResponseEntity<Responce> addprovison(@RequestParam String provisionType,
 			@RequestBody provisionDto provisionDto) throws ParseException {
+		
 
 		Optional<provision> optionalProvision = provisionRepository
 				.findById(provisionDto.getContractID() + "-" + provisionDto.getMonth() + "/" + provisionDto.getYear());
@@ -211,6 +211,11 @@ public class RentController {
 					.error(Boolean.TRUE).msg("provision Already Exist").build());
 
 		provisionDto pDto = rentService.addprovision(provisionType, provisionDto);
+		// ---API CALL RECORD SAVE---
+					apirecords.save(ApiCallRecords.builder().apiname("setprovision")
+							.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+							.msg(pDto.toString()).build());
+
 
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(pDto).error(Boolean.FALSE).msg("provision Added").build());
@@ -234,6 +239,12 @@ public class RentController {
 				throw new RuntimeException("ALLOWED ONLY FOR CURRENT MONTH&YEAR");
 			provision provision = provisionRepository.findByContractIDAndYearAndMonth(contractID, year, month);
 			provisionRepository.delete(provision);
+			//-----------------------------------------
+			// ---API CALL RECORD SAVE---
+			apirecords.save(ApiCallRecords.builder().apiname("Delete Provision")
+					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+					.msg(provision.toString()).build());
+
 
 			String ActualUpdateQuery = "update payment_report set actual_amount=" + 0 + " where id='" + contractID + "-"
 					+ month + "/" + year + "'";
@@ -245,10 +256,9 @@ public class RentController {
 			}
 
 			/**
-			 * -----Delete Record from Payment Report--- AFTER THAT
-			 * 
+			 * ---Delete Record from Payment Report--- AFTER THAT
 			 * @ones We make Again Actual updated monthly report added
-			 *      in @Payment_Report_Table
+			 *       in @Payment_Report_Table
 			 **/
 			paymentReportRepository.deleteById(contractID + "-" + month + "/" + year);
 
@@ -404,11 +414,13 @@ public class RentController {
 
 			RentContract save = rentContractRepository.save(rentContract);
 			responceData.add(save);
-			if (save != null)
+
+			if (save != null) {
 				createRentdue(Rentduecalculation.builder().branchID(save.getBranchID()).contractID(save.getUniqueID())
 						.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
 						.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
 						.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
+			}
 
 		});
 		return ResponseEntity.status(HttpStatus.OK).body(
@@ -441,6 +453,11 @@ public class RentController {
 		rentContract.setUniqueID(uniqueID);
 		RentContract save = rentContractRepository.save(rentContract);
 		if (save != null & flagCheck) {
+			// ---API CALL RECORD SAVE---
+			apirecords.save(ApiCallRecords.builder().apiname("modifyRentDue")
+					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+					.msg(save.getUniqueID() + "/" + save.getMonthlyRent()).build());
+
 			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID()).contractID(save.getUniqueID())
 					.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
 					.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
@@ -587,26 +604,38 @@ public class RentController {
 		return true;
 	}
 
-	// =======MODIFY PAYMENTREPORT TABLE AT 10:30(PM) EVERY NIGHT=================
+	// =====MODIFY PAYMENTREPORT TABLE AT 10:30(PM)& 2:30(AM) EVERY NIGHT=======
+
+	@Scheduled(cron = "0 30 22 * * ?") // 10:30(PM)
+	public void apiCall1() throws ParseException {
+		modifyPaymentReport(LocalDate.now().getMonth() + "", LocalDate.now().getYear() + "");
+	}
+
+	@Scheduled(cron = "0 30 2 * * ?") // 2:30(PM)
+	public void apiCall2() throws ParseException {
+		modifyPaymentReport(LocalDate.now().getMonth() + "", LocalDate.now().getYear() + "");
+	}
 
 	@PostMapping("/ModifyPaymentReport")
-	@Scheduled(cron = "0 33 12 * * ?")
-//	@RequestParam String month, @RequestParam String year
-	public ResponseEntity<Responce> modifyPaymentReport() throws ParseException {
+	public ResponseEntity<Responce> modifyPaymentReport(@RequestParam String month, @RequestParam String year)
+			throws ParseException {
+		// ---API CALL RECORD SAVE---
+		apirecords.save(ApiCallRecords.builder().apiname("ModifyPaymentReport")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).build());
+
 		// To avoid unused contract object flag date is use in Query.
-		LocalDate flagDate = getFlagDate(LocalDate.now().getMonth() + "", LocalDate.now().getYear(), "Start");
+		LocalDate flagDate = getFlagDate(month, Integer.parseInt(year), "Start");
 		List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
-//		RentServiceImpl ServiceImplObj = new RentServiceImpl();
 		if (getcontractIDs != null & !getcontractIDs.isEmpty())
 			getcontractIDs.stream().forEach(cID -> {
-				System.out.println("------" + cID + "------");
+				System.out.println(cID);
 				// HERE WE MODIFY PAYMENT REPORT
-				generatePaymentReport(cID, LocalDate.now().getMonth() + "", LocalDate.now().getYear() + "");
+				generatePaymentReport(cID, month, year);
 			});
 		return null;// return null to Exit..!
 	}
 
-	// ======================DUE CLCULATION LOGIC==========================
+	// ================DUE CLCULATION LOGIC=================
 
 	/**
 	 * method is use to calculate Rent Due..! {Base on rent StartDate-EndDate and
@@ -615,6 +644,7 @@ public class RentController {
 	 * @param Rentduecalculation -> DTO Object..!
 	 */
 	public void createRentdue(Rentduecalculation data) {
+
 		double monthlyRent = data.getMonthlyRent();
 		double escalationPercent = Double.parseDouble(data.getEscalation().trim());
 

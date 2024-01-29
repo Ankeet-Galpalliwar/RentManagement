@@ -218,8 +218,8 @@ public class RentServiceImpl implements RentService {
 					}).collect(Collectors.toList());
 
 			return Responce.builder().data(allprovisionDto).error(Boolean.FALSE).msg("All provision").build();
-		} else {
-			List<provision> allprovision = provisionRepository.getprovion(flag, year);
+		} else {//HERE WE ARE NOT USEING YEAR FIELD...!
+			List<provision> allprovision = provisionRepository.findByContractID(flag);
 			allprovisionDto = allprovision.stream().sorted(Comparator.comparing(provision::getFlag)).map(e -> {
 				provisionDto dto = new provisionDto();
 				BeanUtils.copyProperties(e, dto);

@@ -25,6 +25,9 @@ public interface provisionRepository extends JpaRepository<provision, String> {
 
 	public provision findByContractIDAndYearAndMonth(String contractID, int year, String month);
 
+
+	public List<provision> findByContractID(String flag);
+
 	
 
 }
