@@ -198,6 +198,11 @@ public class RentController {
 	@PostMapping("makeactual")
 	public ResponseEntity<Responce> makeActual(@RequestBody List<MakeActualDto> ActualDto) {
 		Map<String, String> responce = rentService.makeactual(ActualDto);
+		
+		// ---API CALL RECORD SAVE---
+		apirecords.save(ApiCallRecords.builder().apiname("makeactual")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).msg(null).build());
+
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(responce).error(Boolean.FALSE).msg("Actual Done").build());
 	}
@@ -632,7 +637,6 @@ public class RentController {
 		List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
 		if (getcontractIDs != null & !getcontractIDs.isEmpty())
 			getcontractIDs.stream().forEach(cID -> {
-				System.out.println(cID);
 				// HERE WE MODIFY PAYMENT REPORT
 				generatePaymentReport(cID, month, year);
 			});

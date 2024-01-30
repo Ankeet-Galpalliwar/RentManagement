@@ -48,7 +48,6 @@ import lombok.experimental.var;
 
 @Service
 public class RentServiceImpl implements RentService {
-
 	@Autowired
 	PaymentReportRepository paymentReportRepository;
 
@@ -97,7 +96,7 @@ public class RentServiceImpl implements RentService {
 					prDto.add(PaymentReportDto.builder().actualAmount(e.getActualAmount()).due(e.getDue())
 							.Gross(e.getGross()).gstamt(e.getGST()).Info(rentContractDto).monthRent(e.getMonthlyRent())
 							.monthYear(e.getMonth() + "/" + e.getYear()).net(e.getNet()).provision(e.getProvision())
-							.tds(e.getTds()).build());
+							.reporttds(e.getTds()).build());
 				});
 			}
 			return Responce.builder().data(prDto).error(Boolean.FALSE).msg("Payment Report Data..!").build();
@@ -110,7 +109,7 @@ public class RentServiceImpl implements RentService {
 					.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
 					.monthlyRent(generatereport.getMonthRent()).net(generatereport.getNet())
 					.provision(generatereport.getProvision()).ActualAmount(generatereport.getActualAmount())
-					.tds(generatereport.getTds()).GST(generatereport.getGstamt()).year(year).build());
+					.tds(generatereport.getReporttds()).GST(generatereport.getGstamt()).year(year).build());
 			return Responce.builder().data(generatereport).error(Boolean.FALSE).msg("Payment Report Data..!").build();
 		}
 	}
@@ -147,14 +146,14 @@ public class RentServiceImpl implements RentService {
 					if (optationaVariance.isPresent())
 						varianceRepository.delete(optationaVariance.get());
 
-					if ((Data.getMonthlyRent() - Data.getAmount()) != 0.0) {
+					if ((Data.getMonthRent() - Data.getAmount()) != 0.0) {
 						try {
 							varianceRepository.save(Variance.builder().branchID(Data.getBranchID())
 									.contractID(Data.getContractID() + "")
 									.contractInfo(rentContractRepository.findById(Data.getContractID()).get())
 									.dateTime(LocalDate.now())
 									.flag(getFlagDate(Data.getMonth(), Data.getYear(), "start")).month(Data.getMonth())
-									.remark(null).varianceAmount(Data.getMonthlyRent() - Data.getAmount())
+									.remark(null).varianceAmount(Data.getMonthRent() - Data.getAmount())
 									.varianceID(Data.getContractID() + "-" + Data.getMonth() + "-" + Data.getYear())
 									.year(Data.getYear()).build());
 							// Payment Report Generated -> update Table
@@ -349,7 +348,7 @@ public class RentServiceImpl implements RentService {
 			System.out.println(e + "---------Exception---------");
 		}
 		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthRent(MonthRent).net(Net)
-				.provision(provision).tds(tds).sdAmount(sdAmount).actualAmount(ActualAmount).gstamt(Gst)
+				.provision(provision).reporttds(tds).sdAmount(sdAmount).actualAmount(ActualAmount).gstamt(Gst)
 				.monthYear(month + "/" + year).build();
 	}
 

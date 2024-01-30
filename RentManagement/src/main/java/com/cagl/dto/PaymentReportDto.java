@@ -14,7 +14,7 @@ public class PaymentReportDto {
 	private double due;
 	private double provision;
 	private double Gross;
-	private double tds;
+	private double reporttds;
 	private double net;
 	private double gstamt;
 	private double actualAmount;

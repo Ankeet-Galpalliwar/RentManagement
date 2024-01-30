@@ -20,5 +20,5 @@ public class MakeActualDto {
 	private double amount;
 	private LocalDate startDate;
 	private LocalDate endDate;
-	private double monthlyRent;
+	private double monthRent;
 }
