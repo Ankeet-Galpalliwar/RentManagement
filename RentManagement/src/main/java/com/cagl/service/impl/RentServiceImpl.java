@@ -3,6 +3,8 @@ package com.cagl.service.impl;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -23,6 +25,7 @@ import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RentContractDto;
 import com.cagl.dto.Responce;
 import com.cagl.dto.provisionDto;
+import com.cagl.entity.ApiCallRecords;
 import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RentContract;
 import com.cagl.entity.SDRecords;
@@ -92,9 +95,9 @@ public class RentServiceImpl implements RentService {
 					RentContractDto rentContractDto = new RentContractDto();
 					BeanUtils.copyProperties(e.getContractInfo(), rentContractDto);
 					prDto.add(PaymentReportDto.builder().actualAmount(e.getActualAmount()).due(e.getDue())
-							.Gross(e.getGross()).gstamt(e.getGST()).Info(rentContractDto)
-							.monthlyRent(e.getMonthlyRent()).monthYear(e.getMonth() + "/" + e.getYear()).net(e.getNet())
-							.provision(e.getProvision()).tds(e.getTds()).build());
+							.Gross(e.getGross()).gstamt(e.getGST()).Info(rentContractDto).monthRent(e.getMonthlyRent())
+							.monthYear(e.getMonth() + "/" + e.getYear()).net(e.getNet()).provision(e.getProvision())
+							.tds(e.getTds()).build());
 				});
 			}
 			return Responce.builder().data(prDto).error(Boolean.FALSE).msg("Payment Report Data..!").build();
@@ -105,7 +108,7 @@ public class RentServiceImpl implements RentService {
 					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
 					.contractID(contractID).due(generatereport.getDue()).Gross(generatereport.getGross())
 					.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
-					.monthlyRent(generatereport.getMonthlyRent()).net(generatereport.getNet())
+					.monthlyRent(generatereport.getMonthRent()).net(generatereport.getNet())
 					.provision(generatereport.getProvision()).ActualAmount(generatereport.getActualAmount())
 					.tds(generatereport.getTds()).GST(generatereport.getGstamt()).year(year).build());
 			return Responce.builder().data(generatereport).error(Boolean.FALSE).msg("Payment Report Data..!").build();
@@ -218,7 +221,7 @@ public class RentServiceImpl implements RentService {
 					}).collect(Collectors.toList());
 
 			return Responce.builder().data(allprovisionDto).error(Boolean.FALSE).msg("All provision").build();
-		} else {//HERE WE ARE NOT USEING YEAR FIELD...!
+		} else {// HERE WE ARE NOT USEING YEAR FIELD...!
 			List<provision> allprovision = provisionRepository.findByContractID(flag);
 			allprovisionDto = allprovision.stream().sorted(Comparator.comparing(provision::getFlag)).map(e -> {
 				provisionDto dto = new provisionDto();
@@ -345,7 +348,7 @@ public class RentServiceImpl implements RentService {
 		} catch (Exception e) {
 			System.out.println(e + "---------Exception---------");
 		}
-		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthlyRent(MonthRent).net(Net)
+		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthRent(MonthRent).net(Net)
 				.provision(provision).tds(tds).sdAmount(sdAmount).actualAmount(ActualAmount).gstamt(Gst)
 				.monthYear(month + "/" + year).build();
 	}

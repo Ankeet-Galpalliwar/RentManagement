@@ -163,6 +163,12 @@ public class RentController {
 						.error(Boolean.FALSE).msg("All Brannches").build());
 	}
 
+	/**
+	 * NON USE API
+	 * 
+	 * @param sdrecord
+	 * @throws ParseException
+	 */
 	@PostMapping("setsd")
 	public ResponseEntity<Responce> getSd(@RequestBody SDRecoardDto sdrecord) throws ParseException {
 		Optional<provision> optionalProvision = provisionRepository
@@ -202,7 +208,6 @@ public class RentController {
 	@PostMapping("/setprovision")
 	public ResponseEntity<Responce> addprovison(@RequestParam String provisionType,
 			@RequestBody provisionDto provisionDto) throws ParseException {
-		
 
 		Optional<provision> optionalProvision = provisionRepository
 				.findById(provisionDto.getContractID() + "-" + provisionDto.getMonth() + "/" + provisionDto.getYear());
@@ -212,10 +217,9 @@ public class RentController {
 
 		provisionDto pDto = rentService.addprovision(provisionType, provisionDto);
 		// ---API CALL RECORD SAVE---
-					apirecords.save(ApiCallRecords.builder().apiname("setprovision")
-							.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-							.msg(pDto.toString()).build());
-
+		apirecords.save(ApiCallRecords.builder().apiname("setprovision")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(pDto.toString()).build());
 
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(pDto).error(Boolean.FALSE).msg("provision Added").build());
@@ -239,12 +243,11 @@ public class RentController {
 				throw new RuntimeException("ALLOWED ONLY FOR CURRENT MONTH&YEAR");
 			provision provision = provisionRepository.findByContractIDAndYearAndMonth(contractID, year, month);
 			provisionRepository.delete(provision);
-			//-----------------------------------------
+			// -----------------------------------------
 			// ---API CALL RECORD SAVE---
 			apirecords.save(ApiCallRecords.builder().apiname("Delete Provision")
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(provision.toString()).build());
-
 
 			String ActualUpdateQuery = "update payment_report set actual_amount=" + 0 + " where id='" + contractID + "-"
 					+ month + "/" + year + "'";
@@ -257,6 +260,7 @@ public class RentController {
 
 			/**
 			 * ---Delete Record from Payment Report--- AFTER THAT
+			 * 
 			 * @ones We make Again Actual updated monthly report added
 			 *       in @Payment_Report_Table
 			 **/
