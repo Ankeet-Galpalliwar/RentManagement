@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
@@ -151,7 +152,7 @@ public class RentContract {
 	private String panDocumentPath;
 	
 	
-	@OneToMany(mappedBy = "contractInfo")
+	@OneToMany(mappedBy = "contractInfo",fetch = FetchType.EAGER)
 //	@Exclude
 	private List<Variance> variances;
 

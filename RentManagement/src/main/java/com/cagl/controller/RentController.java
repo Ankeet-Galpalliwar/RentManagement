@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.cagl.dto.BranchDto;
+import com.cagl.dto.BulkProvisionDeletion;
 import com.cagl.dto.MakeActualDto;
 import com.cagl.dto.RecipiantDto;
 import com.cagl.dto.RentContractDto;
@@ -198,10 +199,11 @@ public class RentController {
 	@PostMapping("makeactual")
 	public ResponseEntity<Responce> makeActual(@RequestBody List<MakeActualDto> ActualDto) {
 		Map<String, String> responce = rentService.makeactual(ActualDto);
-		
+
 		// ---API CALL RECORD SAVE---
 		apirecords.save(ApiCallRecords.builder().apiname("makeactual")
-				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).msg(null).build());
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).msg(null)
+				.build());
 
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(responce).error(Boolean.FALSE).msg("Actual Done").build());
@@ -244,8 +246,8 @@ public class RentController {
 	@DeleteMapping("deleteProvision")
 	public String deleteProvision(@RequestParam String contractID, @RequestParam int year, @RequestParam String month) {
 		try {
-			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) & LocalDate.now().getYear() != year)
-				throw new RuntimeException("ALLOWED ONLY FOR CURRENT MONTH&YEAR");
+//			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) & LocalDate.now().getYear() != year)
+//				throw new RuntimeException("ALLOWED ONLY FOR CURRENT MONTH&YEAR");
 			provision provision = provisionRepository.findByContractIDAndYearAndMonth(contractID, year, month);
 			provisionRepository.delete(provision);
 			// -----------------------------------------
@@ -269,19 +271,37 @@ public class RentController {
 			 * @ones We make Again Actual updated monthly report added
 			 *       in @Payment_Report_Table
 			 **/
+			try {
 			paymentReportRepository.deleteById(contractID + "-" + month + "/" + year);
+			}catch (Exception e) {
+				System.out.println("paymentReportRepository not exist..!");
+			}
+			
 
 			// ------Reset Actual Value---------
 			String actualID = contractID + "-" + year;
 			String query = "update rent_actual set " + month + "=" + 0 + " where rent_actualid='" + actualID + "'";
 			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
 			jdbcTemplate.update(query);
-
-			return "PROVISION DELETION DONE";
+			return "PROVISION DELETION DONE " + contractID + "-" + month + "/" + year;
 		} catch (Exception e) {
-			return "PROVISION DELETION FAILED" + "[ " + e.getMessage() + " ]";
+			return "PROVISION DELETION FAILED" + contractID + "-" + month + "/" + year + "[ " + e.getMessage() + " ]";
 		}
 
+	}
+
+	@PostMapping("/BulkProvisionDelete")
+	public ResponseEntity<Responce> bulkpProvisionDelete(
+			@RequestBody List<BulkProvisionDeletion> bulkProvisionDeletion) {
+		// ---API CALL RECORD SAVE---
+		apirecords.save(ApiCallRecords.builder().apiname("BulkProvisionDelete")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(bulkProvisionDeletion.toString()).build());
+
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().data(bulkProvisionDeletion.stream().map(e -> {
+					return deleteProvision(e.getContractID(), e.getYear(), e.getMonth());
+				}).collect(Collectors.toList())).msg("Bulk provision Deleted...!").error(Boolean.FALSE).build());
 	}
 
 	@PostMapping("/getenure")
