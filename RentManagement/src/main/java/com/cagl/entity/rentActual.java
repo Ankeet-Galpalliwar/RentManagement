@@ -21,9 +21,12 @@ import lombok.ToString;
 @NoArgsConstructor
 public class rentActual {
 
+	
 	@Id
 	private String rentActualID;
+	private String BranchID;
 	private int ContractID;
+	private int year;
 	private double january;
 	private double february;
 	private double march;
@@ -38,6 +41,4 @@ public class rentActual {
 	private double december;
 	private LocalDate startDate;
 	private LocalDate endDate;
-	private int year;
-	private String BranchID;
 }

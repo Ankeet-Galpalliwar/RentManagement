@@ -25,6 +25,7 @@ public class Tds {
 	private String rentTdsID;
 	private String branchID;
 	private int ContractID;
+	private int year;
 	private double january;
 	private double february;
 	private double march;
@@ -37,7 +38,6 @@ public class Tds {
 	private double october;
 	private double november;
 	private double december;
-	private int year;
 
 
 }

@@ -198,13 +198,11 @@ public class RentController {
 
 	@PostMapping("makeactual")
 	public ResponseEntity<Responce> makeActual(@RequestBody List<MakeActualDto> ActualDto) {
-		Map<String, String> responce = rentService.makeactual(ActualDto);
-
 		// ---API CALL RECORD SAVE---
 		apirecords.save(ApiCallRecords.builder().apiname("makeactual")
-				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).msg(null)
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).msg(ActualDto.toString())
 				.build());
-
+		Map<String, String> responce = rentService.makeactual(ActualDto);
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(responce).error(Boolean.FALSE).msg("Actual Done").build());
 	}
@@ -266,17 +264,15 @@ public class RentController {
 			}
 
 			/**
-			 * ---Delete Record from Payment Report--- AFTER THAT
+			 * ---Delete Record from Payment Report--- AFTER THAT.
 			 * 
 			 * @ones We make Again Actual updated monthly report added
 			 *       in @Payment_Report_Table
 			 **/
 			try {
-			paymentReportRepository.deleteById(contractID + "-" + month + "/" + year);
-			}catch (Exception e) {
-				System.out.println("paymentReportRepository not exist..!");
+				paymentReportRepository.deleteById(contractID + "-" + month + "/" + year);
+			} catch (Exception e) {
 			}
-			
 
 			// ------Reset Actual Value---------
 			String actualID = contractID + "-" + year;
@@ -287,7 +283,6 @@ public class RentController {
 		} catch (Exception e) {
 			return "PROVISION DELETION FAILED" + contractID + "-" + month + "/" + year + "[ " + e.getMessage() + " ]";
 		}
-
 	}
 
 	@PostMapping("/BulkProvisionDelete")

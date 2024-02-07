@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class RentContractDto {
 
 	private int uniqueID;
+	private int priviousContractID;
 	private String branchID;
 	//Lesser info
 	private String lessorName;

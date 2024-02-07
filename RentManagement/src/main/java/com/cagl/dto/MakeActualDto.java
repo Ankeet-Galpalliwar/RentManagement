@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class MakeActualDto {
 
 	private int contractID;
+	private int tdsAmount;
 	private String branchID;
 	private String month;
 	private int year;
