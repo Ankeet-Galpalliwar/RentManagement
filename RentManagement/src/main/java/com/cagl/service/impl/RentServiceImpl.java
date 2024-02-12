@@ -90,6 +90,23 @@ public class RentServiceImpl implements RentService {
 	public Responce getPaymentReport(String contractID, String month, String year) {
 		if (contractID.equalsIgnoreCase("all")) {
 			List<PaymentReport> data = paymentReportRepository.findByMonthAndYear(month, year);
+////------------------------------------------------------------------------------------
+//			List<PaymentReport> rL = new ArrayList<>();
+//			List<PaymentReport> tempL = new ArrayList<>();
+//
+//			data.stream().forEach(D -> {
+//				data.stream().filter(cd -> {
+//
+//				});
+//				data.contains(month);
+//				if (true) {
+//					tempL.add(D);
+//				}
+//
+//			});
+
+			// =========================================================================
+
 			List<PaymentReportDto> prDto = new ArrayList<>();
 			if (data != null) {
 				data.stream().forEach(e -> {

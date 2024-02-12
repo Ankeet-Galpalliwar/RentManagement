@@ -16,6 +16,9 @@ public class RentContractDto {
 
 	private int uniqueID;
 	private int priviousContractID;
+	private String remarks;
+	private String joinaddress_Vendor;
+	private String joinaddress_Premesis;
 	private String branchID;
 	//Lesser info
 	private String lessorName;
@@ -25,7 +28,6 @@ public class RentContractDto {
 	private String lessorGstNumber;
 //	private String lessorTdsNumber;
 	private String paymentMode;
-	
 	
 	private String nationality;
 	private String contractStatus; //new & renewal

@@ -2,6 +2,8 @@ package com.cagl.entity;
 
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -23,6 +25,7 @@ import lombok.Setter;
 public class PaymentReport {
 
 	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private String ID;
 	private double due;
 	private double provision;
@@ -36,9 +39,9 @@ public class PaymentReport {
 	private double ActualAmount;
 	private String contractID;
 	private String branchID;
-	
+
 	@ManyToOne(fetch = FetchType.EAGER)
-	@JoinColumn(name="contractInfo")
+	@JoinColumn(name = "contractInfo")
 	private RentContract contractInfo;
 
 }

@@ -27,6 +27,9 @@ public class RentContract {
 	@Id
 	private int uniqueID;
 	private int priviousContractID;
+	private String remarks;
+	private String joinaddress_Vendor;
+	private String joinaddress_Premesis;
 	private String branchID;
 	//Lesser info
 	private String lessorName;
