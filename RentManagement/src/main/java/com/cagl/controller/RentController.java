@@ -244,8 +244,8 @@ public class RentController {
 	@DeleteMapping("deleteProvision")
 	public String deleteProvision(@RequestParam String contractID, @RequestParam int year, @RequestParam String month) {
 		try {
-//			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) & LocalDate.now().getYear() != year)
-//				throw new RuntimeException("ALLOWED ONLY FOR CURRENT MONTH&YEAR");
+			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) & LocalDate.now().getYear() != year)
+				throw new RuntimeException("ALLOWED ONLY FOR CURRENT MONTH&YEAR");
 			provision provision = provisionRepository.findByContractIDAndYearAndMonth(contractID, year, month);
 			provisionRepository.delete(provision);
 			// -----------------------------------------

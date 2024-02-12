@@ -25,7 +25,7 @@ import lombok.Setter;
 public class PaymentReport {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+//	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private String ID;
 	private double due;
 	private double provision;

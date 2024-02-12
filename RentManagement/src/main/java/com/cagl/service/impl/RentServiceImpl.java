@@ -3,8 +3,6 @@ package com.cagl.service.impl;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -14,6 +12,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.xssf.streaming.SXSSFCell;
+import org.apache.poi.xssf.streaming.SXSSFRow;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,10 +32,8 @@ import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RentContractDto;
 import com.cagl.dto.Responce;
 import com.cagl.dto.provisionDto;
-import com.cagl.entity.ApiCallRecords;
 import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RentContract;
-import com.cagl.entity.SDRecords;
 import com.cagl.entity.Tds;
 import com.cagl.entity.Variance;
 import com.cagl.entity.provision;
@@ -45,8 +50,6 @@ import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
 import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
-
-import lombok.experimental.var;
 
 @Service
 public class RentServiceImpl implements RentService {
@@ -86,27 +89,186 @@ public class RentServiceImpl implements RentService {
 	@Autowired
 	private JdbcTemplate jdbcTemplate1;
 
+	int rowNum = 1;
+
+	public void m1() {
+		List<PaymentReport> data = paymentReportRepository.findByMonthAndYear("", "");
+		if (!data.isEmpty() & data != null) {
+
+			// Create Excel Structure
+			SXSSFWorkbook workBook = new SXSSFWorkbook();
+			SXSSFSheet sheet = workBook.createSheet("My Data");
+			// custom text
+			Font font = workBook.createFont();
+			font.setFontName("Arial");
+			font.setBold(false);
+			font.setColor(IndexedColors.WHITE.getIndex());
+			CellStyle cellStyle = workBook.createCellStyle();
+			cellStyle.setFont(font);
+			cellStyle.setFillForegroundColor(IndexedColors.BLACK.getIndex());
+			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+			// create header row
+
+			SXSSFRow header = sheet.createRow(0);// SXSSFSheet
+
+			SXSSFCell cell0 = header.createCell(0);
+			cell0.setCellStyle(cellStyle);
+			cell0.setCellValue("Contract_ID");
+
+			SXSSFCell cell2 = header.createCell(1);
+			cell2.setCellStyle(cellStyle);
+			cell2.setCellValue("Status");
+
+			SXSSFCell cell = header.createCell(2);
+			cell.setCellStyle(cellStyle);
+			cell.setCellValue("Branch_ID");
+
+			SXSSFCell cellu = header.createCell(3);
+			cellu.setCellStyle(cellStyle);
+			cellu.setCellValue("Office_Name");
+
+			SXSSFCell cell3 = header.createCell(4);
+			cell3.setCellStyle(cellStyle);
+			cell3.setCellValue("lessor_Name");
+
+			SXSSFCell cell4 = header.createCell(5);
+			cell4.setCellStyle(cellStyle);
+			cell4.setCellValue("Bank_Name");
+
+			SXSSFCell cell5 = header.createCell(6);
+			cell5.setCellStyle(cellStyle);
+			cell5.setCellValue("IFSC");
+
+			SXSSFCell cell6 = header.createCell(7);
+			cell6.setCellStyle(cellStyle);
+			cell6.setCellValue("Account_Number");
+
+			SXSSFCell cell7 = header.createCell(7);
+			cell7.setCellStyle(cellStyle);
+			cell7.setCellValue("Rent_Start_Date");
+
+			SXSSFCell cell8 = header.createCell(8);
+			cell8.setCellStyle(cellStyle);
+			cell8.setCellValue("Rent_End_Date");
+
+			SXSSFCell cell9 = header.createCell(9);
+			cell9.setCellStyle(cellStyle);
+			cell9.setCellValue("Initial_MonthRent");
+
+			SXSSFCell cell10 = header.createCell(10);
+			cell10.setCellStyle(cellStyle);
+			cell10.setCellValue("Current_MonthRent");
+
+			SXSSFCell cell11 = header.createCell(11);
+			cell11.setCellStyle(cellStyle);
+			cell11.setCellValue("Due");
+
+			SXSSFCell cell12 = header.createCell(12);
+			cell12.setCellStyle(cellStyle);
+			cell12.setCellValue("Provision");
+
+			SXSSFCell cell13 = header.createCell(13);
+			cell13.setCellStyle(cellStyle);
+			cell13.setCellValue("Gross");
+
+			SXSSFCell cell14 = header.createCell(14);
+			cell14.setCellStyle(cellStyle);
+			cell14.setCellValue("TDS");
+
+			SXSSFCell cell15 = header.createCell(15);
+			cell15.setCellStyle(cellStyle);
+			cell15.setCellValue("NET");
+
+			SXSSFCell cell16 = header.createCell(16);
+			cell16.setCellStyle(cellStyle);
+			cell16.setCellValue("GST");
+
+			SXSSFCell cell17 = header.createCell(17);
+			cell17.setCellStyle(cellStyle);
+			cell17.setCellValue("Actual Amount");
+
+			SXSSFCell cell18 = header.createCell(18);
+			cell18.setCellStyle(cellStyle);
+			cell18.setCellValue("Remarks");
+
+			// added row
+			// style row
+			CellStyle style = workBook.createCellStyle();
+			style.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
+			style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+			CellStyle style1 = workBook.createCellStyle();
+			style.setFillForegroundColor(IndexedColors.BLACK.getIndex());
+			style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+			rowNum = 1;
+			List<PaymentReport> doneList = new ArrayList<>();
+			List<PaymentReport> tempL = new ArrayList<>();
+
+			data.stream().forEach(D -> {
+				// clear temp_list
+				tempL.clear();
+				if (data.stream().anyMatch(obj -> obj.getContractID()
+						.equalsIgnoreCase(D.getContractInfo().getPriviousContractID() + ""))) {
+
+					tempL.add(D);
+					PaymentReport linkedcontract = data.stream().filter(
+							id -> id.getContractID().equalsIgnoreCase(D.getContractInfo().getPriviousContractID() + ""))
+							.collect(Collectors.toList()).get(0);
+
+					tempL.add(linkedcontract);
+					doneList.add(linkedcontract);
+					doneList.add(D);
+
+					tempL.stream().forEach(item -> {
+						SXSSFRow row = sheet.createRow(rowNum++);
+						row.setRowStyle(style);
+						row.createCell(0).setCellValue(item.getContractID());
+						row.createCell(1).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+						row.createCell(2).setCellValue(item.getBranchID());
+					});
+					SXSSFRow row = sheet.createRow(rowNum++);
+					row.setRowStyle(style1);
+//						row.createCell(0).setCellValue(item.getBranchID());
+//						row.createCell(1).setCellValue(item.getBranchID());
+//						row.createCell(2).setCellValue(item.getBranchID());
+
+				} else {
+					if (!doneList.contains(D)) {
+						doneList.add(D);
+
+						SXSSFRow row = sheet.createRow(rowNum++);
+						row.createCell(0).setCellValue(D.getBranchID());
+						row.createCell(1).setCellValue(D.getBranchID());
+						row.createCell(2).setCellValue(D.getBranchID());
+
+					}
+				}
+
+			});
+
+		}
+
+	}
+
 	@Override
 	public Responce getPaymentReport(String contractID, String month, String year) {
 		if (contractID.equalsIgnoreCase("all")) {
 			List<PaymentReport> data = paymentReportRepository.findByMonthAndYear(month, year);
-////------------------------------------------------------------------------------------
-//			List<PaymentReport> rL = new ArrayList<>();
-//			List<PaymentReport> tempL = new ArrayList<>();
-//
-//			data.stream().forEach(D -> {
-//				data.stream().filter(cd -> {
-//
-//				});
-//				data.contains(month);
-//				if (true) {
-//					tempL.add(D);
-//				}
-//
-//			});
-
-			// =========================================================================
-
 			List<PaymentReportDto> prDto = new ArrayList<>();
 			if (data != null) {
 				data.stream().forEach(e -> {
@@ -122,13 +284,14 @@ public class RentServiceImpl implements RentService {
 		} else {
 			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year);
 			// Here we are saving(Generated Payment Report) Data for audit purpose.
-			paymentReportRepository.save(PaymentReport.builder().branchID(generatereport.getInfo().getBranchID())
-					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
-					.contractID(contractID).due(generatereport.getDue()).Gross(generatereport.getGross())
-					.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
-					.monthlyRent(generatereport.getMonthRent()).net(generatereport.getNet())
-					.provision(generatereport.getProvision()).ActualAmount(generatereport.getActualAmount())
-					.tds(generatereport.getReporttds()).GST(generatereport.getGstamt()).year(year).build());
+			PaymentReport save = paymentReportRepository
+					.save(PaymentReport.builder().branchID(generatereport.getInfo().getBranchID())
+							.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
+							.contractID(contractID + "jhhgjhg").due(generatereport.getDue())
+							.Gross(generatereport.getGross()).ID(contractID + "-" + generatereport.getMonthYear())
+							.month(month).monthlyRent(generatereport.getMonthRent()).net(generatereport.getNet())
+							.provision(generatereport.getProvision()).ActualAmount(generatereport.getActualAmount())
+							.tds(generatereport.getReporttds()).GST(generatereport.getGstamt()).year(year).build());
 			return Responce.builder().data(generatereport).error(Boolean.FALSE).msg("Payment Report Data..!").build();
 		}
 	}
