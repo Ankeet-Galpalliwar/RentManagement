@@ -44,6 +44,8 @@ public class RentDueDto {
 	private double escalation;
 	private String Status;
 	
+	private RentContractDto info;
+	
 	
 	
 }

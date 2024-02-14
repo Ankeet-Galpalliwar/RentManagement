@@ -10,7 +10,7 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.cagl</groupId>
-	<artifactId>RentMnagement</artifactId>
+	<artifactId>RentManagement</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>war</packaging>
 	<name>RentManagement</name>

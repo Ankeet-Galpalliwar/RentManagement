@@ -24,5 +24,7 @@ public class provisionDto {
 	private LocalDate dateTime;
 	private LocalDate flag;
 	private RentContractDto info;
+	//field is use for to give Delete Option
+	private  boolean deleteFlag;
 
 }

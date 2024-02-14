@@ -252,7 +252,7 @@ public class RentController {
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
 
-	@Transactional
+//	@Transactional
 	@DeleteMapping("deleteProvision")
 	public String deleteProvision(@RequestParam String contractID, @RequestParam int year, @RequestParam String month) {
 		try {
@@ -266,10 +266,10 @@ public class RentController {
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(provision.toString()).build());
 
-			String ActualUpdateQuery = "update payment_report set actual_amount=" + 0 + " where id='" + contractID + "-"
-					+ month + "/" + year + "'";
-			String tdsQuery = "update tds set " + month + "=" + 0
-			+ " where rent_tdsid='" + contractID+"-"+year + "'";
+			String ActualUpdateQuery = "update payment_report set actual_amount=" + "'--'" + " where id='" + contractID
+					+ "-" + month + "/" + year + "'";
+			String tdsQuery = "update tds set " + month + "=" + 0 + " where rent_tdsid='" + contractID + "-" + year
+					+ "'";
 			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
 			jdbcTemplate.update(tdsQuery);
 			if (jdbcTemplate.update(ActualUpdateQuery) != 0) {
@@ -292,7 +292,7 @@ public class RentController {
 
 			// ------Reset Actual Value---------
 			String actualID = contractID + "-" + year;
-			String query = "update rent_actual set " + month + "=" + 0 + " where rent_actualid='" + actualID + "'";
+			String query = "update rent_actual set " + month + "=" + "'--'" + " where rent_actualid='" + actualID + "'";
 			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
 			jdbcTemplate.update(query);
 			return "PROVISION DELETION DONE " + contractID + "-" + month + "/" + year;
@@ -342,8 +342,12 @@ public class RentController {
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(getrentdue.stream().map(e -> {
 			RentDueDto rentDue = new RentDueDto();
 			BeanUtils.copyProperties(e, rentDue);
-			String Status = rentContractRepository.getstatus(e.getContractID());
-			rentDue.setStatus(Status);
+			RentContract rentContract = rentContractRepository.findById(e.getContractID()).get();
+			rentDue.setStatus(rentContract.getAgreementActivationStatus());
+			RentContractDto dto = new RentContractDto();
+			BeanUtils.copyProperties(rentContract, dto);
+			rentDue.setInfo(dto);
+			rentDue.setStatus(dto.getAgreementActivationStatus());
 			return rentDue;
 		})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
@@ -354,8 +358,11 @@ public class RentController {
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(getrentdue.stream().map(e -> {
 			RentDueDto rentduedto = new RentDueDto();
 			BeanUtils.copyProperties(e, rentduedto);
-			String Status = rentContractRepository.getstatus(e.getContractID());
-			rentduedto.setStatus(Status);
+			RentContract rentContract = rentContractRepository.findById(e.getContractID()).get();
+			rentduedto.setStatus(rentContract.getAgreementActivationStatus());
+			RentContractDto dto = new RentContractDto();
+			BeanUtils.copyProperties(rentContract, dto);
+			rentduedto.setInfo(dto);
 			return rentduedto;
 		})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
@@ -1616,10 +1623,13 @@ public class RentController {
 			CellStyle style1 = workBook.createCellStyle();
 			style1.setFillForegroundColor(IndexedColors.INDIGO.getIndex());
 			style1.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+			CellStyle cellstyle = workBook.createCellStyle();
+			cellstyle.setFillForegroundColor(IndexedColors.RED.getIndex());
+			cellstyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 			rno = 1;
 			List<PaymentReport> doneList = new ArrayList<>();
 			List<PaymentReport> tempL = new ArrayList<>();
-
 			data.stream().forEach(D -> {
 				if (!doneList.contains(D)) {
 					// clear temp_list
@@ -1658,7 +1668,11 @@ public class RentController {
 							row.createCell(15).setCellValue(item.getTds());
 							row.createCell(16).setCellValue(item.getNet());
 							row.createCell(17).setCellValue(item.getGST());
-							row.createCell(18).setCellValue(item.getActualAmount());
+							SXSSFCell actualcell = row.createCell(18);
+							if (item.getActualAmount().equalsIgnoreCase("--")) {
+								actualcell.setCellStyle(cellstyle);
+							}
+							actualcell.setCellValue(item.getActualAmount());
 						});
 						SXSSFRow row = sheet.createRow(rno++);
 						row.setRowStyle(style1);
@@ -1683,11 +1697,20 @@ public class RentController {
 						row.createCell(15).setCellValue(linkedcontract.getTds() + D.getTds());
 						row.createCell(16).setCellValue(linkedcontract.getNet() + D.getNet());
 						row.createCell(17).setCellValue(linkedcontract.getGST() + D.getGST());
-						row.createCell(18).setCellValue(linkedcontract.getActualAmount() + D.getActualAmount());
+						SXSSFCell actualcell = row.createCell(18);
+						if (linkedcontract.getActualAmount().equalsIgnoreCase("--")
+								|| D.getActualAmount().equalsIgnoreCase("--")) {
+							actualcell.setCellStyle(cellstyle);
+						}
+						try {
+							actualcell.setCellValue(Double.parseDouble(linkedcontract.getActualAmount())
+									+ Double.parseDouble(D.getActualAmount()));
+						} catch (Exception e) {
+							actualcell.setCellValue("--");
+						}
 					} else {
 						if (!doneList.contains(D)) {
 							doneList.add(D);
-
 							SXSSFRow row = sheet.createRow(rno++);
 							row.createCell(0).setCellValue(D.getContractID());
 							row.createCell(1).setCellValue(D.getContractInfo().getAgreementActivationStatus());
@@ -1707,18 +1730,18 @@ public class RentController {
 							row.createCell(15).setCellValue(D.getTds());
 							row.createCell(16).setCellValue(D.getNet());
 							row.createCell(17).setCellValue(D.getGST());
-							row.createCell(18).setCellValue(D.getActualAmount());
-
+							SXSSFCell actualcell = row.createCell(18);
+							if (D.getActualAmount().equalsIgnoreCase("--")) {
+								actualcell.setCellStyle(cellstyle);
+							}
+							actualcell.setCellValue(D.getActualAmount());
 						}
 					}
 				}
-
 			});
-
 			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 			workBook.write(outputStream);
 			workBook.dispose();
-
 			byte[] byteArray = outputStream.toByteArray();
 			ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArray);
 			InputStreamResource inputStreamResource = new InputStreamResource(byteArrayInputStream);

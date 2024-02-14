@@ -17,12 +17,14 @@ public class PaymentReportDto {
 	private double reporttds;
 	private double net;
 	private double gstamt;
-	private double actualAmount;
+	private String actualAmount;
 	private double sdAmount;
 	private double monthRent;
 //	private double initialRent;
 	private String monthYear;
 	private RentContractDto Info;
+	//Field is use for Payment Done or not
+	private boolean PaymentFlag;
 	
 	
 }

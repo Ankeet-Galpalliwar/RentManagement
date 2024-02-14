@@ -36,7 +36,7 @@ public class PaymentReport {
 	private double monthlyRent;
 	private String month;
 	private String year;
-	private double ActualAmount;
+	private String ActualAmount;
 	private String contractID;
 	private String branchID;
 
