@@ -11,6 +11,13 @@ import com.cagl.entity.RentContract;
 
 @Repository
 public interface RentContractRepository extends JpaRepository<RentContract, Integer> {
+	
+	@Query(value = "SELECT  distinct lessee_branch_name  FROM rentmanagementdemo.rent_contract" , nativeQuery = true)
+	List<String> getbranchNames();
+	
+	@Query(value = "SELECT  distinct branchid  FROM rentmanagementdemo.rent_contract" , nativeQuery = true)
+	List<String> getbranchIds();
+	
 
 	@Query(value = "SELECT  branchid FROM rent_contract where lessee_branch_type LIKE %:uu%", nativeQuery = true)
 	List<String> getbranchIDs(@Param("uu") String uu);

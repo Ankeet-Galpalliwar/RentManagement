@@ -1,5 +1,8 @@
 package com.cagl.controller;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -15,9 +18,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.xssf.streaming.SXSSFCell;
+import org.apache.poi.xssf.streaming.SXSSFRow;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -48,6 +62,7 @@ import com.cagl.dto.varianceDto;
 import com.cagl.entity.ApiCallRecords;
 import com.cagl.entity.BranchDetail;
 import com.cagl.entity.IfscMaster;
+import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RentContract;
 import com.cagl.entity.RentDue;
 import com.cagl.entity.RfBranchMaster;
@@ -148,19 +163,16 @@ public class RentController {
 
 	@GetMapping("filterBranchIDs")
 	public ResponseEntity<Responce> getBranchIdsforFilter() {
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder()
-						.data(rentContractRepository.findAll().stream().map(e -> e.getBranchID()).distinct()
-								.collect(Collectors.toList()))
-						.error(Boolean.FALSE).msg("Get All Branch IDS base on contract master..!").build());
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder()
+				.data(rentContractRepository.getbranchIds().stream().sorted().distinct().collect(Collectors.toList()))
+				.error(Boolean.FALSE).msg("Get All Branch IDS base on contract master..!").build());
 	}
 
 	@GetMapping("getBranchName")
 	public ResponseEntity<Responce> getBranchNames() {
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder()
-						.data(rentContractRepository.findAll().stream().map(e -> e.getLesseeBranchName()).distinct()
-								.sorted().collect(Collectors.toList()))
+						.data(rentContractRepository.getbranchNames().stream().sorted().collect(Collectors.toList()))
 						.error(Boolean.FALSE).msg("All Brannches").build());
 	}
 
@@ -200,8 +212,8 @@ public class RentController {
 	public ResponseEntity<Responce> makeActual(@RequestBody List<MakeActualDto> ActualDto) {
 		// ---API CALL RECORD SAVE---
 		apirecords.save(ApiCallRecords.builder().apiname("makeactual")
-				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).msg(ActualDto.toString())
-				.build());
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(ActualDto.toString()).build());
 		Map<String, String> responce = rentService.makeactual(ActualDto);
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(responce).error(Boolean.FALSE).msg("Actual Done").build());
@@ -244,7 +256,7 @@ public class RentController {
 	@DeleteMapping("deleteProvision")
 	public String deleteProvision(@RequestParam String contractID, @RequestParam int year, @RequestParam String month) {
 		try {
-			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) & LocalDate.now().getYear() != year)
+			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) && LocalDate.now().getYear() != year)
 				throw new RuntimeException("ALLOWED ONLY FOR CURRENT MONTH&YEAR");
 			provision provision = provisionRepository.findByContractIDAndYearAndMonth(contractID, year, month);
 			provisionRepository.delete(provision);
@@ -256,6 +268,10 @@ public class RentController {
 
 			String ActualUpdateQuery = "update payment_report set actual_amount=" + 0 + " where id='" + contractID + "-"
 					+ month + "/" + year + "'";
+			String tdsQuery = "update tds set " + month + "=" + 0
+			+ " where rent_tdsid='" + contractID+"-"+year + "'";
+			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
+			jdbcTemplate.update(tdsQuery);
 			if (jdbcTemplate.update(ActualUpdateQuery) != 0) {
 				Optional<Variance> optationaVariance = varianceRepository
 						.findById(contractID + "-" + month + "-" + year);
@@ -435,6 +451,8 @@ public class RentController {
 			rentContract.setGstNo(data.getGstNo());
 			rentContract.setLessorRentAmount(data.getLessorRentAmount());
 			rentContract.setMonthlyRent(data.getLessorRentAmount());
+			// ====Dummy Value Set void Error in Excel Download.!====
+			rentContract.setPriviousContractID(0);
 
 			RentContract save = rentContractRepository.save(rentContract);
 			responceData.add(save);
@@ -637,7 +655,8 @@ public class RentController {
 
 	@Scheduled(cron = "0 30 2 * * ?") // 2:30(PM)
 	public void apiCall2() throws ParseException {
-		modifyPaymentReport(LocalDate.now().getMonth() + "", LocalDate.now().getYear() + "");
+		if (LocalDate.now().getDayOfMonth() == 1)// only execute month start
+			modifyPaymentReport(LocalDate.now().getMonth() + "", LocalDate.now().getYear() + "");
 	}
 
 	@PostMapping("/ModifyPaymentReport")
@@ -646,7 +665,9 @@ public class RentController {
 		// ---API CALL RECORD SAVE---
 		apirecords.save(ApiCallRecords.builder().apiname("ModifyPaymentReport")
 				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).build());
-
+		// -----Here We Delete All Current Month Record..!-----
+		List<PaymentReport> ExistingRecord = paymentReportRepository.findByMonthAndYear(month, year);
+		paymentReportRepository.deleteAll(ExistingRecord);
 		// To avoid unused contract object flag date is use in Query.
 		LocalDate flagDate = getFlagDate(month, Integer.parseInt(year), "Start");
 		List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
@@ -946,10 +967,17 @@ public class RentController {
 						if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
 
 							if (m == rentEndDate.getMonthValue() & y == rentEndDate.getYear()) {
+								/**
+								 * This is additional Scenario for escalation apply for start date with 01-JAN
+								 */
+								if (rentStartDate.getDayOfMonth() == 01)
+									due.setDecember((int) Math
+											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
+													* rentEndDate.getDayOfMonth()));
+								else
+									due.setDecember(
+											(int) Math.round(((monthlyRent) / 31) * rentEndDate.getDayOfMonth()));
 
-								due.setDecember((int) Math
-										.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
-												* rentEndDate.getDayOfMonth()));
 							} else {
 								double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
 										* ((31 - (escalationApplyDate.getDayOfMonth()) + 1));
@@ -1472,6 +1500,232 @@ public class RentController {
 
 		}
 
+	}
+
+	int rno = 1;
+
+	@GetMapping("/DownloadPaymentReport")
+	public ResponseEntity<InputStreamResource> ExcelDownload(@RequestParam String month, @RequestParam String year)
+			throws IOException {
+		List<PaymentReport> data = paymentReportRepository.findByMonthAndYear(month, year);
+		if (!data.isEmpty() & data != null) {
+
+			// Create Excel Structure
+			SXSSFWorkbook workBook = new SXSSFWorkbook();
+			SXSSFSheet sheet = workBook.createSheet("My Data");
+			// custom text
+			Font font = workBook.createFont();
+			font.setFontName("Arial");
+			font.setBold(false);
+			font.setColor(IndexedColors.WHITE.getIndex());
+			CellStyle cellStyle = workBook.createCellStyle();
+			cellStyle.setFont(font);
+			cellStyle.setFillForegroundColor(IndexedColors.BLACK.getIndex());
+			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+			// create header row
+
+			SXSSFRow header = sheet.createRow(0);// SXSSFSheet
+
+			SXSSFCell cell0 = header.createCell(0);
+			cell0.setCellStyle(cellStyle);
+			cell0.setCellValue("Contract_ID");
+
+			SXSSFCell cell2 = header.createCell(1);
+			cell2.setCellStyle(cellStyle);
+			cell2.setCellValue("Status");
+
+			SXSSFCell cell = header.createCell(2);
+			cell.setCellStyle(cellStyle);
+			cell.setCellValue("Branch_ID");
+
+			SXSSFCell cellu = header.createCell(3);
+			cellu.setCellStyle(cellStyle);
+			cellu.setCellValue("Office_Name");
+
+			SXSSFCell cell3 = header.createCell(4);
+			cell3.setCellStyle(cellStyle);
+			cell3.setCellValue("lessor_Name");
+
+			SXSSFCell cell4 = header.createCell(5);
+			cell4.setCellStyle(cellStyle);
+			cell4.setCellValue("Bank_Name");
+
+			SXSSFCell cell5 = header.createCell(6);
+			cell5.setCellStyle(cellStyle);
+			cell5.setCellValue("IFSC");
+
+			SXSSFCell cell6 = header.createCell(7);
+			cell6.setCellStyle(cellStyle);
+			cell6.setCellValue("Account_Number");
+
+			SXSSFCell cell7 = header.createCell(8);
+			cell7.setCellStyle(cellStyle);
+			cell7.setCellValue("Rent_Start_Date");
+
+			SXSSFCell cell8 = header.createCell(9);
+			cell8.setCellStyle(cellStyle);
+			cell8.setCellValue("Rent_End_Date");
+
+			SXSSFCell cell9 = header.createCell(10);
+			cell9.setCellStyle(cellStyle);
+			cell9.setCellValue("Initial_MonthRent");
+
+			SXSSFCell cell10 = header.createCell(11);
+			cell10.setCellStyle(cellStyle);
+			cell10.setCellValue("Current_MonthRent");
+
+			SXSSFCell cell11 = header.createCell(12);
+			cell11.setCellStyle(cellStyle);
+			cell11.setCellValue("Due");
+
+			SXSSFCell cell12 = header.createCell(13);
+			cell12.setCellStyle(cellStyle);
+			cell12.setCellValue("Provision");
+
+			SXSSFCell cell13 = header.createCell(14);
+			cell13.setCellStyle(cellStyle);
+			cell13.setCellValue("Gross");
+
+			SXSSFCell cell14 = header.createCell(15);
+			cell14.setCellStyle(cellStyle);
+			cell14.setCellValue("TDS");
+
+			SXSSFCell cell15 = header.createCell(16);
+			cell15.setCellStyle(cellStyle);
+			cell15.setCellValue("NET");
+
+			SXSSFCell cell16 = header.createCell(17);
+			cell16.setCellStyle(cellStyle);
+			cell16.setCellValue("GST");
+
+			SXSSFCell cell17 = header.createCell(18);
+			cell17.setCellStyle(cellStyle);
+			cell17.setCellValue("Actual Amount");
+
+			SXSSFCell cell18 = header.createCell(19);
+			cell18.setCellStyle(cellStyle);
+			cell18.setCellValue("Remarks");
+
+			// added row
+			// style row
+			CellStyle style = workBook.createCellStyle();
+			style.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+			style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+			CellStyle style1 = workBook.createCellStyle();
+			style1.setFillForegroundColor(IndexedColors.INDIGO.getIndex());
+			style1.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+			rno = 1;
+			List<PaymentReport> doneList = new ArrayList<>();
+			List<PaymentReport> tempL = new ArrayList<>();
+
+			data.stream().forEach(D -> {
+				if (!doneList.contains(D)) {
+					// clear temp_list
+					tempL.clear();
+					if (data.stream().anyMatch(obj -> obj.getContractID()
+							.equalsIgnoreCase(D.getContractInfo().getPriviousContractID() + ""))) {
+
+						tempL.add(D);
+						PaymentReport linkedcontract = data.stream()
+								.filter(id -> id.getContractID()
+										.equalsIgnoreCase(D.getContractInfo().getPriviousContractID() + ""))
+								.collect(Collectors.toList()).get(0);
+
+						tempL.add(linkedcontract);
+						doneList.add(linkedcontract);
+						doneList.add(D);
+
+						tempL.stream().forEach(item -> {
+							SXSSFRow row = sheet.createRow(rno++);
+							row.setRowStyle(style);
+							row.createCell(0).setCellValue(item.getContractID());
+							row.createCell(1).setCellValue(item.getContractInfo().getAgreementActivationStatus());
+							row.createCell(2).setCellValue(item.getBranchID());
+							row.createCell(3).setCellValue(item.getContractInfo().getLesseeBranchName());
+							row.createCell(4).setCellValue(item.getContractInfo().getLessorRecipiantsName());
+							row.createCell(5).setCellValue(item.getContractInfo().getLessorBankName());
+							row.createCell(6).setCellValue(item.getContractInfo().getLessorIfscNumber());
+							row.createCell(7).setCellValue(item.getContractInfo().getLessorAccountNumber());
+							row.createCell(8).setCellValue(item.getContractInfo().getRentStartDate());
+							row.createCell(9).setCellValue(item.getContractInfo().getRentEndDate());
+							row.createCell(10).setCellValue(item.getContractInfo().getLessorRentAmount());
+							row.createCell(11).setCellValue(item.getMonthlyRent());
+							row.createCell(12).setCellValue(item.getDue());
+							row.createCell(13).setCellValue(item.getProvision());
+							row.createCell(14).setCellValue(item.getGross());
+							row.createCell(15).setCellValue(item.getTds());
+							row.createCell(16).setCellValue(item.getNet());
+							row.createCell(17).setCellValue(item.getGST());
+							row.createCell(18).setCellValue(item.getActualAmount());
+						});
+						SXSSFRow row = sheet.createRow(rno++);
+						row.setRowStyle(style1);
+						row.createCell(0).setCellValue(linkedcontract.getContractID() + "|" + D.getContractID());
+						row.createCell(1).setCellValue(D.getContractInfo().getAgreementActivationStatus());
+						row.createCell(2).setCellValue(D.getBranchID());
+						row.createCell(3).setCellValue(D.getContractInfo().getLesseeBranchName());
+						row.createCell(4).setCellValue(D.getContractInfo().getLessorRecipiantsName());
+						row.createCell(5).setCellValue(D.getContractInfo().getLessorBankName());
+						row.createCell(6).setCellValue(D.getContractInfo().getLessorIfscNumber());
+						row.createCell(7).setCellValue(D.getContractInfo().getLessorAccountNumber());
+						row.createCell(8).setCellValue(linkedcontract.getContractInfo().getAgreementStartDate() + "|"
+								+ D.getContractInfo().getRentStartDate());
+						row.createCell(9).setCellValue(linkedcontract.getContractInfo().getAgreementEndDate() + "|"
+								+ D.getContractInfo().getRentEndDate());
+						row.createCell(10).setCellValue(linkedcontract.getContractInfo().getLessorRentAmount() + "|"
+								+ D.getContractInfo().getLessorRentAmount());
+						row.createCell(11).setCellValue(linkedcontract.getMonthlyRent() + "|" + D.getMonthlyRent());
+						row.createCell(12).setCellValue(linkedcontract.getDue() + D.getDue());
+						row.createCell(13).setCellValue(linkedcontract.getProvision() + D.getProvision());
+						row.createCell(14).setCellValue(linkedcontract.getGross() + D.getGross());
+						row.createCell(15).setCellValue(linkedcontract.getTds() + D.getTds());
+						row.createCell(16).setCellValue(linkedcontract.getNet() + D.getNet());
+						row.createCell(17).setCellValue(linkedcontract.getGST() + D.getGST());
+						row.createCell(18).setCellValue(linkedcontract.getActualAmount() + D.getActualAmount());
+					} else {
+						if (!doneList.contains(D)) {
+							doneList.add(D);
+
+							SXSSFRow row = sheet.createRow(rno++);
+							row.createCell(0).setCellValue(D.getContractID());
+							row.createCell(1).setCellValue(D.getContractInfo().getAgreementActivationStatus());
+							row.createCell(2).setCellValue(D.getBranchID());
+							row.createCell(3).setCellValue(D.getContractInfo().getLesseeBranchName());
+							row.createCell(4).setCellValue(D.getContractInfo().getLessorRecipiantsName());
+							row.createCell(5).setCellValue(D.getContractInfo().getLessorBankName());
+							row.createCell(6).setCellValue(D.getContractInfo().getLessorIfscNumber());
+							row.createCell(7).setCellValue(D.getContractInfo().getLessorAccountNumber());
+							row.createCell(8).setCellValue(D.getContractInfo().getRentStartDate());
+							row.createCell(9).setCellValue(D.getContractInfo().getRentEndDate());
+							row.createCell(10).setCellValue(D.getContractInfo().getLessorRentAmount());
+							row.createCell(11).setCellValue(D.getMonthlyRent());
+							row.createCell(12).setCellValue(D.getDue());
+							row.createCell(13).setCellValue(D.getProvision());
+							row.createCell(14).setCellValue(D.getGross());
+							row.createCell(15).setCellValue(D.getTds());
+							row.createCell(16).setCellValue(D.getNet());
+							row.createCell(17).setCellValue(D.getGST());
+							row.createCell(18).setCellValue(D.getActualAmount());
+
+						}
+					}
+				}
+
+			});
+
+			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+			workBook.write(outputStream);
+			workBook.dispose();
+
+			byte[] byteArray = outputStream.toByteArray();
+			ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArray);
+			InputStreamResource inputStreamResource = new InputStreamResource(byteArrayInputStream);
+			return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=Data.xlsx")
+					.contentType(MediaType.parseMediaType("application/vnd.ms-excel")).body(inputStreamResource);
+		}
+		return null;
 	}
 
 }
