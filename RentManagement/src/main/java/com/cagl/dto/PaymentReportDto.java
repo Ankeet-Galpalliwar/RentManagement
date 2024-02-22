@@ -12,11 +12,11 @@ import lombok.NoArgsConstructor;
 public class PaymentReportDto {
 	
 	private double due;
-	private double provision;
+	private String provision;
 	private double Gross;
-	private double reporttds;
-	private double net;
-	private double gstamt;
+	private String reporttds;
+	private String net;
+	private String gstamt;
 	private String actualAmount;
 	private double sdAmount;
 	private double monthRent;

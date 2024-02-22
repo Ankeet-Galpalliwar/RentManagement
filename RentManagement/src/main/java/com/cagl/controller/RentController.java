@@ -13,9 +13,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -81,6 +83,7 @@ import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
 import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
+import com.cagl.service.impl.RentServiceImpl;
 
 /**
  * @author Ankeet G.
@@ -120,7 +123,11 @@ public class RentController {
 	@GetMapping("/getvariance")
 	public ResponseEntity<Responce> getvariance(@RequestParam String contractID) {
 		List<varianceDto> allvariDtos = new ArrayList<>();
-		List<Variance> allVariance = varianceRepository.findByContractID(contractID);
+		List<Variance> allVariance = new ArrayList<>();
+		if (contractID.equalsIgnoreCase("all"))
+			allVariance = varianceRepository.findAll();
+		else
+			allVariance = varianceRepository.findByContractID(contractID);
 		if (!allVariance.isEmpty() & allVariance != null) {
 			allVariance.stream().forEach(e -> {
 				varianceDto varianceDto = new varianceDto();
@@ -210,11 +217,18 @@ public class RentController {
 
 	@PostMapping("makeactual")
 	public ResponseEntity<Responce> makeActual(@RequestBody List<MakeActualDto> ActualDto) {
-		// ---API CALL RECORD SAVE---
-		apirecords.save(ApiCallRecords.builder().apiname("makeactual")
-				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-				.msg(ActualDto.toString()).build());
 		Map<String, String> responce = rentService.makeactual(ActualDto);
+		// ---API CALL RECORD SAVE---
+		try {
+			apirecords.save(ApiCallRecords.builder().apiname("makeactual")
+					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+					.msg(ActualDto.toString() + "Responce=>" + responce.toString()).build());
+		} catch (Exception e) {
+			//--> IF MSG Field Large.
+			apirecords.save(ApiCallRecords.builder().apiname("makeactual")
+					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+					.msg(ActualDto.toString()).build());
+		}
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(responce).error(Boolean.FALSE).msg("Actual Done").build());
 	}
@@ -254,6 +268,7 @@ public class RentController {
 
 //	@Transactional
 	@DeleteMapping("deleteProvision")
+	
 	public String deleteProvision(@RequestParam String contractID, @RequestParam int year, @RequestParam String month) {
 		try {
 			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) && LocalDate.now().getYear() != year)
@@ -332,6 +347,8 @@ public class RentController {
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
 			@RequestParam String year) {
+//		if (contractID == null || month == null || year == null)
+//			return ResponseEntity.status(HttpStatus.OK).body(null);
 		Responce responce = rentService.getPaymentReport(contractID, month, year);
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
@@ -635,12 +652,12 @@ public class RentController {
 
 	// =======================GENERATE BULK DUE ===========================
 	/**
-	 * @Api is only use for BackEnd Bulk Calculation Purpose..!
-	 * 
+	 * @Api is only use for BackEnd Bulk Remaining RentDue Calculation Purpose..!
+	 * @only one Time Used While After DataDump Process
 	 */
 //	@GetMapping("makeDue")
 	public Boolean generateRentDue() {
-
+		// Get all pending Due Calculation ContractIDs
 		List<RentContract> allcontract = rentContractRepository.getduemakerIDs();
 		allcontract.stream().map(e -> {
 			return Rentduecalculation.builder().branchID(e.getBranchID()).contractID(e.getUniqueID())
@@ -667,8 +684,7 @@ public class RentController {
 	}
 
 	@PostMapping("/ModifyPaymentReport")
-	public ResponseEntity<Responce> modifyPaymentReport(@RequestParam String month, @RequestParam String year)
-			throws ParseException {
+	public String modifyPaymentReport(@RequestParam String month, @RequestParam String year) throws ParseException {
 		// ---API CALL RECORD SAVE---
 		apirecords.save(ApiCallRecords.builder().apiname("ModifyPaymentReport")
 				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).build());
@@ -676,11 +692,27 @@ public class RentController {
 		List<PaymentReport> ExistingRecord = paymentReportRepository.findByMonthAndYear(month, year);
 		paymentReportRepository.deleteAll(ExistingRecord);
 		// To avoid unused contract object flag date is use in Query.
+
 		LocalDate flagDate = getFlagDate(month, Integer.parseInt(year), "Start");
+		
 		List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
-		if (getcontractIDs != null & !getcontractIDs.isEmpty())
-			getcontractIDs.stream().forEach(cID -> {
+//      some time out of Start_End Date also payment is there -> Query Use to take Actual Table & provision_Table CID.
+
+//		String Query="SELECT contractid FROM rent_actual where year="+year+" and "+ month+"!='--' and agreement_activation_status ='Open';";
+//		List<String> getcontractIDsActualTable = jdbcTemplate.queryForList(Query,String.class );
+
+		String ProvisionIDsQuery = "SELECT contractid FROM provision where month='" + month
+				+ "' and year=" + year + "";
+		List<String> ProvisionIDs = jdbcTemplate.queryForList(ProvisionIDsQuery, String.class);
+		// Used set to avoid DublicateIds
+		Set<String> IDs = new HashSet<>();
+		IDs.addAll(getcontractIDs);
+//		IDs.addAll(getcontractIDsActualTable);
+		IDs.addAll(ProvisionIDs);
+		if (IDs != null & !IDs.isEmpty())
+			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
+//				System.out.println(cID+"====>"+flagDate+"");
 				generatePaymentReport(cID, month, year);
 			});
 		return null;// return null to Exit..!
@@ -1658,8 +1690,8 @@ public class RentController {
 							row.createCell(5).setCellValue(item.getContractInfo().getLessorBankName());
 							row.createCell(6).setCellValue(item.getContractInfo().getLessorIfscNumber());
 							row.createCell(7).setCellValue(item.getContractInfo().getLessorAccountNumber());
-							row.createCell(8).setCellValue(item.getContractInfo().getRentStartDate());
-							row.createCell(9).setCellValue(item.getContractInfo().getRentEndDate());
+							row.createCell(8).setCellValue(item.getContractInfo().getRentStartDate() + "");
+							row.createCell(9).setCellValue(item.getContractInfo().getRentEndDate() + "");
 							row.createCell(10).setCellValue(item.getContractInfo().getLessorRentAmount());
 							row.createCell(11).setCellValue(item.getMonthlyRent());
 							row.createCell(12).setCellValue(item.getDue());
@@ -1720,8 +1752,8 @@ public class RentController {
 							row.createCell(5).setCellValue(D.getContractInfo().getLessorBankName());
 							row.createCell(6).setCellValue(D.getContractInfo().getLessorIfscNumber());
 							row.createCell(7).setCellValue(D.getContractInfo().getLessorAccountNumber());
-							row.createCell(8).setCellValue(D.getContractInfo().getRentStartDate());
-							row.createCell(9).setCellValue(D.getContractInfo().getRentEndDate());
+							row.createCell(8).setCellValue(D.getContractInfo().getRentStartDate() + "");
+							row.createCell(9).setCellValue(D.getContractInfo().getRentEndDate() + "");
 							row.createCell(10).setCellValue(D.getContractInfo().getLessorRentAmount());
 							row.createCell(11).setCellValue(D.getMonthlyRent());
 							row.createCell(12).setCellValue(D.getDue());
