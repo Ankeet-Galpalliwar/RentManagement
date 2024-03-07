@@ -23,7 +23,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RentContract {
-	
+
 	@Id
 	private int uniqueID;
 	private int priviousContractID;
@@ -31,7 +31,7 @@ public class RentContract {
 	private String joinaddress_Vendor;
 	private String joinaddress_Premesis;
 	private String branchID;
-	//Lesser info
+	// Lesser info
 	private String lessorName;
 	private String lessorContactNumber;
 	private String lessorEmailAddress;
@@ -39,14 +39,10 @@ public class RentContract {
 	private String lessorGstNumber;
 //	private String lessorTdsNumber;
 	private String paymentMode;
-	
-	
+
 	private String nationality;
-	private String contractStatus; //new & renewal
-	
-	
-	
-	
+	private String contractStatus; // new & renewal
+
 //	private String lessorElectricityBillNumber;
 //	private String lessorTaxNumber;
 //	private String lessorBankPassBookNumber;
@@ -64,7 +60,6 @@ public class RentContract {
 	private String lessorTaluka;
 	private String lessorDistrict;
 	private String lessorState;
-	
 
 	private String lesseeBranchName;
 	private String lesseeAreaName;
@@ -75,8 +70,7 @@ public class RentContract {
 	private String lesseeApproverrenewals;
 	private String lesseeApproverRelocation;
 	private String lesseeEntityDetails;
-	
-	
+
 	private String premesisLocation;
 	private String premesisDoorNumber;
 	private String premesisFloorNumber;
@@ -95,7 +89,7 @@ public class RentContract {
 //	private String premesisZone;
 //	private String premesisState;
 	private String premesisBuildingType;
-	private String schedulePrimesis;
+	private String schedulePrimesis; // Field is use As a EscalatedMonth for Rent_Due Calculation
 	private String glName;
 	private String glEmpId;
 	private String signedDate;
@@ -103,8 +97,7 @@ public class RentContract {
 	private String southPremesis;
 	private String eastPremesis;
 	private String westPremesis;
-	
-	
+
 	private LocalDate agreementSignDate;
 	private String agreementTenure;
 	private String agreementActivationStatus;
@@ -117,8 +110,7 @@ public class RentContract {
 	private String electricity;
 	private String documentType;
 	private String documentPath;
-	
-	
+
 	private int securityDepositAmount;
 	private LocalDate securityDepositPaymentDate;
 	private String securityDepositUtr;
@@ -126,7 +118,7 @@ public class RentContract {
 	private String securityDepositnoticePeriod;
 	private String securityDepositExitTerm;
 	private int standardDeducition;
-	
+
 	// Recipiants Details
 	private String lessorRecipiantsName;
 	private String lessorBankName;
@@ -136,27 +128,24 @@ public class RentContract {
 	private String panNo;
 	private String gstNo;
 	private double lessorRentAmount;
-	
-	
+
 	private String escalation;
 	private String tds;
 	private String gst;
-	
+
 	private String lattitude;
 	private String longitude;
 	private String gpsCoordinates;
-	
+
 	private double monthlyRent;
-	
-	
-	//document path 
+
+	// document path
 	private String lessorElectricityBillPath;
 	private String lessorTaxNumberPath;
 	private String lessorBankPassBookPath;
 	private String panDocumentPath;
-	
-	
-	@OneToMany(mappedBy = "contractInfo",fetch = FetchType.EAGER)
+
+	@OneToMany(mappedBy = "contractInfo", fetch = FetchType.EAGER)
 //	@Exclude
 	private List<Variance> variances;
 

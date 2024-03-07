@@ -3,6 +3,7 @@ package com.cagl.service.impl;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -144,17 +145,35 @@ public class RentServiceImpl implements RentService {
 
 			actualDto.stream().filter(e -> {
 				LocalDate flagDate = null;
+				boolean pCondition = false;//
+
 				try {
 					flagDate = getFlagDate(e.getMonth(), e.getYear(), "start");
 				} catch (ParseException e1) {
 				}
-				if (flagDate.isAfter(now)) {
+				// ====Get Previous Month Value =======
+				/**
+				 * @check ->IF previous Month Actual not done then not allowed to make Actual(If
+				 *        rent_start Date then allowed.
+				 */
+				String Pmonth = flagDate.minusMonths(1).getMonth().toString();
+				int Pyear = flagDate.minusMonths(1).getYear();
+				List<String> getvalue = getvalue("SELECT " + Pmonth + " FROM rent_actual where year=" + Pyear
+						+ " and contractid=" + e.getContractID() + "");
+				if (((getvalue.isEmpty() || getvalue == null))) {
+					if (!(((e.getStartDate().getMonth().toString()).equalsIgnoreCase(e.getMonth()))
+							& (e.getStartDate().getYear() == e.getYear()))) {
+						pCondition = true;
+					}
+				} else if (getvalue.get(0).equalsIgnoreCase("--")) {
+					pCondition = true;
+				}
+				if (flagDate.isAfter(now) || pCondition) {
 					responce.put(e.getContractID() + "", "NOT PAID Not Eligible");
 					return false;
 				} else {
 					return true;
 				}
-
 			}).forEach(Data -> {
 
 				try {
@@ -173,7 +192,7 @@ public class RentServiceImpl implements RentService {
 					// ---------------FOR TDS------------
 					jdbcTemplate1.execute("SET SQL_SAFE_UPDATES = 0");
 					Optional<Tds> tdsData = tdsRepository.findById(ID);
-					if (Data.getTdsAmount() != 0) {
+					if (true) {//Data.getTdsAmount() != 0
 						if (!tdsData.isPresent()) {
 							tdsRepository.save(Tds.builder().january(0).february(0).march(0).april(0).may(0).june(0)
 									.july(0).august(0).september(0).october(0).november(0).december(0)
@@ -319,7 +338,8 @@ public class RentServiceImpl implements RentService {
 		return jdbcTemplate.query(sqlQuery, (resultSet, rowNum) -> {
 			if (resultSet != null)
 				return resultSet.getString(1);
-			return "0.0";
+			return null;
+//			return "0.0";
 		});
 	}
 
@@ -369,7 +389,7 @@ public class RentServiceImpl implements RentService {
 			 * @To get Monthly Rent Logic has Written At starting of method -> for Handle
 			 * Error!
 			 */
-			if (overallprovisioin != null& !overallprovisioin.isBlank()) {
+			if (overallprovisioin != null) {// & !overallprovisioin.isEmpty()
 				// -----------provision value Initiate-----------------overall active base on
 				// overall active base on date provision sum ...!
 				provision += Double.parseDouble(overallprovisioin);
@@ -377,7 +397,7 @@ public class RentServiceImpl implements RentService {
 			DueValue += MonthRent;
 			// ----------initiate Variance on DueValue---------
 			String overAllVariance = varianceRepository.getoverallvariance(contractID, flagDate + "");
-			if (overAllVariance != null& !overAllVariance.isBlank()) {
+			if (overAllVariance != null) {// & !overAllVariance.isEmpty()
 				DueValue += Double.parseDouble(overAllVariance);
 			}
 			// ----------Gross Value initiate---------
@@ -397,7 +417,9 @@ public class RentServiceImpl implements RentService {
 			if (!tdsValue.isEmpty() & tdsValue != null)
 				tds = Double.parseDouble(getvalue(tdsQuery).get(0));
 			// ----------GST Value initiate-----------
-			Gst += 0.0;
+			double gstpercent = Double.parseDouble(rentContract.getGst());
+
+			Gst += Math.round(((gstpercent / 100.0f) * gross));
 			// ----------Net Value initiate-----------
 			Net = gross - tds + Gst;
 			// ----------Rent Actual initiate-----------
@@ -407,7 +429,7 @@ public class RentServiceImpl implements RentService {
 			if (!actualValue.isEmpty() & actualValue != null)
 				ActualAmount = actualValue.get(0);
 			else
-				ActualAmount="--";
+				ActualAmount = "--";
 		} catch (
 
 		Exception e) {

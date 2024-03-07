@@ -20,4 +20,5 @@ public class Rentduecalculation {
 	private String escalation;
 	private String renewalTenure;
 	private double monthlyRent;
+	private  double escalatedMonth;
 }

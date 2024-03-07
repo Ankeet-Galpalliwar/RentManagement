@@ -224,7 +224,7 @@ public class RentController {
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(ActualDto.toString() + "Responce=>" + responce.toString()).build());
 		} catch (Exception e) {
-			//--> IF MSG Field Large.
+			// --> IF MSG Field Large.
 			apirecords.save(ApiCallRecords.builder().apiname("makeactual")
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(ActualDto.toString()).build());
@@ -268,7 +268,7 @@ public class RentController {
 
 //	@Transactional
 	@DeleteMapping("deleteProvision")
-	
+
 	public String deleteProvision(@RequestParam String contractID, @RequestParam int year, @RequestParam String month) {
 		try {
 			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) && LocalDate.now().getYear() != year)
@@ -464,7 +464,7 @@ public class RentController {
 			if (ids.isEmpty())
 				rentContract.setUniqueID(1); // Input value type is int
 			else
-				rentContract.setUniqueID((ids.get(ids.size() - 1) + 1)); // Input value type is int.
+				rentContract.setUniqueID((ids.get(ids.size() - 1) + 1)); // Input value type is Integer.
 
 			rentContract.setLessorRecipiantsName(data.getLessorRecipiantsName());
 			rentContract.setLessorBankName(data.getLessorBankName());
@@ -476,16 +476,26 @@ public class RentController {
 			rentContract.setLessorRentAmount(data.getLessorRentAmount());
 			rentContract.setMonthlyRent(data.getLessorRentAmount());
 			// ====Dummy Value Set void Error in Excel Download.!====
-			rentContract.setPriviousContractID(0);
+//			rentContract.setPriviousContractID(0);
+			// =====IF Any Error found then-> By Default Escalated Month Value is 11=====
+			try {
+				double escalatedMonth = Double.parseDouble(rentContractDto.getSchedulePrimesis());
+				rentContract.setSchedulePrimesis(escalatedMonth + "");
+			} catch (Exception e) {
+				// TODO: handle exception
+				rentContract.setSchedulePrimesis("11");
+			}
 
 			RentContract save = rentContractRepository.save(rentContract);
 			responceData.add(save);
 
 			if (save != null) {
-				createRentdue(Rentduecalculation.builder().branchID(save.getBranchID()).contractID(save.getUniqueID())
-						.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
-						.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
-						.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
+				createRentdue(
+						Rentduecalculation.builder().escalatedMonth(Double.parseDouble(save.getSchedulePrimesis()))
+								.branchID(save.getBranchID()).contractID(save.getUniqueID())
+								.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
+								.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
+								.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
 			}
 
 		});
@@ -508,7 +518,12 @@ public class RentController {
 		boolean flagCheck = false; // its false don't calculate Due..!
 		if (!rentContract.getRentStartDate().toString().equalsIgnoreCase(contractDto.getRentStartDate().toString())
 				|| !rentContract.getRentEndDate().toString().equalsIgnoreCase(contractDto.getRentEndDate().toString())
-				|| contractDto.getLessorRentAmount() != rentContract.getLessorRentAmount()) {
+				|| contractDto.getLessorRentAmount() != rentContract.getLessorRentAmount()
+				|| !rentContract.getSchedulePrimesis().equalsIgnoreCase(contractDto.getSchedulePrimesis())) {
+			/*
+			 * @NOTE:->In above condition [SchedulePrimesis] field is use As a Escalated
+			 * Month for Rent_Due Calculation
+			 */
 			List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
 			unusedDueData.stream().forEach(due -> {
 				dueRepository.delete(due);
@@ -524,7 +539,7 @@ public class RentController {
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(save.getUniqueID() + "/" + save.getMonthlyRent()).build());
 
-			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID()).contractID(save.getUniqueID())
+			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID()).escalatedMonth(Double.parseDouble(save.getSchedulePrimesis())).contractID(save.getUniqueID())
 					.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
 					.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
 					.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
@@ -646,8 +661,12 @@ public class RentController {
 		String monthValueString = String.format("%02d", monthValue);
 		if (startORend.equalsIgnoreCase("start"))
 			return LocalDate.parse(year + "-" + monthValueString + "-01");
-		else
-			return LocalDate.parse(year + "-" + monthValueString + "-31");
+		else {
+			if(month.equalsIgnoreCase("February")) {
+				return LocalDate.parse(year + "-" + monthValueString + "-28");
+			}
+			return LocalDate.parse(year + "-" + monthValueString + "-30");
+		}
 	}
 
 	// =======================GENERATE BULK DUE ===========================
@@ -660,11 +679,12 @@ public class RentController {
 		// Get all pending Due Calculation ContractIDs
 		List<RentContract> allcontract = rentContractRepository.getduemakerIDs();
 		allcontract.stream().map(e -> {
-			return Rentduecalculation.builder().branchID(e.getBranchID()).contractID(e.getUniqueID())
+			return Rentduecalculation.builder().branchID(e.getBranchID()).escalatedMonth(Integer.parseInt(e.getSchedulePrimesis())).contractID(e.getUniqueID())
 					.escalation(e.getEscalation()).lesseeBranchType(e.getLesseeBranchType())
 					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
 					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
 		}).collect(Collectors.toList()).stream().forEach(data -> {
+			System.out.println(data.getContractID() + "========");
 			createRentdue(data);
 		});
 		return true;
@@ -690,19 +710,22 @@ public class RentController {
 				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).build());
 		// -----Here We Delete All Current Month Record..!-----
 		List<PaymentReport> ExistingRecord = paymentReportRepository.findByMonthAndYear(month, year);
-		paymentReportRepository.deleteAll(ExistingRecord);
+		try {
+			paymentReportRepository.deleteAll(ExistingRecord);
+		} catch (Exception e) {
+		}
 		// To avoid unused contract object flag date is use in Query.
 
-		LocalDate flagDate = getFlagDate(month, Integer.parseInt(year), "Start");
-		
-		List<String> getcontractIDs = rentContractRepository.getcontractIDs(flagDate + "");
+		LocalDate SflagDate = getFlagDate(month, Integer.parseInt(year), "Start");
+		LocalDate EflagDate = getFlagDate(month, Integer.parseInt(year), "End");
+
+		List<String> getcontractIDs = rentContractRepository.getcontractIDs(SflagDate + "", EflagDate + "");
 //      some time out of Start_End Date also payment is there -> Query Use to take Actual Table & provision_Table CID.
 
 //		String Query="SELECT contractid FROM rent_actual where year="+year+" and "+ month+"!='--' and agreement_activation_status ='Open';";
 //		List<String> getcontractIDsActualTable = jdbcTemplate.queryForList(Query,String.class );
 
-		String ProvisionIDsQuery = "SELECT contractid FROM provision where month='" + month
-				+ "' and year=" + year + "";
+		String ProvisionIDsQuery = "SELECT contractid FROM provision where month='" + month + "' and year=" + year + "";
 		List<String> ProvisionIDs = jdbcTemplate.queryForList(ProvisionIDsQuery, String.class);
 		// Used set to avoid DublicateIds
 		Set<String> IDs = new HashSet<>();
@@ -712,7 +735,7 @@ public class RentController {
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
-//				System.out.println(cID+"====>"+flagDate+"");
+//				System.out.println(cID+"====>");
 				generatePaymentReport(cID, month, year);
 			});
 		return null;// return null to Exit..!
@@ -736,7 +759,7 @@ public class RentController {
 
 		int endYear = rentEndDate.getYear();
 		int startYear = rentStartDate.getYear();
-		LocalDate escalationApplyDate = rentStartDate.plusMonths(11);
+		LocalDate escalationApplyDate = rentStartDate.plusMonths((long) data.getEscalatedMonth());
 
 		for (int y = rentStartDate.getYear(); y <= rentEndDate.getYear(); y++) {
 			RentDue due = new RentDue();
@@ -762,7 +785,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setJanuary((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentStartDate.getMonthValue())
@@ -790,7 +813,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / day) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setFebruary((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 
@@ -813,7 +836,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setMarch((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentStartDate.getMonthValue())
@@ -835,7 +858,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setApril((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 
@@ -858,7 +881,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setMay((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentStartDate.getMonthValue())
@@ -880,7 +903,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setJune((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentStartDate.getMonthValue())
@@ -902,7 +925,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setJuly((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentStartDate.getMonthValue())
@@ -923,7 +946,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setAugust((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentStartDate.getMonthValue())
@@ -944,7 +967,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setSeptember((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentStartDate.getMonthValue())
@@ -966,7 +989,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setOctober((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentStartDate.getMonthValue())
@@ -988,7 +1011,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setNovember((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentStartDate.getMonthValue())
@@ -1023,7 +1046,7 @@ public class RentController {
 								double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 								due.setDecember((int) Math.round(rentafter + rentbefor));
 								// Here Monthly rent modify as per Escalation.
-								escalationApplyDate = escalationApplyDate.plusMonths(11);
+								escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 								monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 							}
 						} else {
@@ -1050,18 +1073,29 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setJanuary((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
 
-									due.setJanuary((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setJanuary((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 31) * ((31 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setJanuary((int) Math.round(rentafter + rentbefor));
 								}
+
+								// ============================
+//								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
+//									due.setJanuary((int) Math
+//											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
+//													* rentEndDate.getDayOfMonth()));
+//								} else {
+//									due.setJanuary((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
+//								}
 							} else
 								due.setJanuary((int) Math.round(monthlyRent));
 						}
@@ -1081,20 +1115,32 @@ public class RentController {
 							double rentbefor = (monthlyRent / day) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setFebruary((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
 
-									due.setFebruary((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / day)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setFebruary(
 											(int) Math.round((monthlyRent / day) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ day) * ((day - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / day) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setFebruary((int) Math.round(rentafter + rentbefor));
 								}
+								// ======================
+//								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
+//
+//									due.setFebruary((int) Math
+//											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / day)
+//													* rentEndDate.getDayOfMonth()));
+//								} else {
+//									due.setFebruary(
+//											(int) Math.round((monthlyRent / day) * rentEndDate.getDayOfMonth()));
+//								}
 							} else
 								due.setFebruary((int) Math.round(monthlyRent));
 						}
@@ -1108,18 +1154,28 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setMarch((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
-
-									due.setMarch((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setMarch((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 31) * ((31 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setMarch((int) Math.round(rentafter + rentbefor));
 								}
+
+//								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
+//
+//									due.setMarch((int) Math
+//											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
+//													* rentEndDate.getDayOfMonth()));
+//								} else {
+//									due.setMarch((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
+//								}
 							} else
 								due.setMarch((int) Math.round(monthlyRent));
 						}
@@ -1134,18 +1190,20 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setApril((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
 
-									due.setApril((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 30)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setApril((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 30) * ((30 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setApril((int) Math.round(rentafter + rentbefor));
 								}
 							} else
 								due.setApril((int) Math.round(monthlyRent));
@@ -1161,18 +1219,21 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setMay((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
 
-									due.setMay((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setMay((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 31) * ((31 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setMay((int) Math.round(rentafter + rentbefor));
 								}
+
 							} else
 								due.setMay((int) Math.round(monthlyRent));
 						}
@@ -1187,17 +1248,18 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setJune((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
-
-									due.setJune((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 30)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setJune((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 30) * ((30 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setJune((int) Math.round(rentafter + rentbefor));
 								}
 							} else
 								due.setJune((int) Math.round(monthlyRent));
@@ -1213,17 +1275,18 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setJuly((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
-
-									due.setJuly((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setJuly((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 31) * ((31 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setJuly((int) Math.round(rentafter + rentbefor));
 								}
 							} else
 								due.setJuly((int) Math.round(monthlyRent));
@@ -1239,17 +1302,18 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setAugust((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
-
-									due.setAugust((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setAugust((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 31) * ((31 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setAugust((int) Math.round(rentafter + rentbefor));
 								}
 							} else
 								due.setAugust((int) Math.round(monthlyRent));
@@ -1265,18 +1329,19 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setSeptember((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
-
-									due.setSeptember((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 30)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setSeptember(
 											(int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 30) * ((30 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setSeptember((int) Math.round(rentafter + rentbefor));
 								}
 							} else
 								due.setSeptember((int) Math.round(monthlyRent));
@@ -1292,17 +1357,18 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setOctober((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
-
-									due.setOctober((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setOctober((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 31) * ((31 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setOctober((int) Math.round(rentafter + rentbefor));
 								}
 							} else
 								due.setOctober((int) Math.round(monthlyRent));
@@ -1316,17 +1382,18 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setNovember((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
-
-									due.setNovember((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 30)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setNovember((int) Math.round((monthlyRent / 30) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 30) * ((30 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setNovember((int) Math.round(rentafter + rentbefor));
 								}
 							} else
 								due.setNovember((int) Math.round(monthlyRent));
@@ -1342,17 +1409,18 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setDecember((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							if (m == rentEndDate.getMonthValue()) {
-								if (y == escalationApplyDate.getYear() && m == escalationApplyDate.getMonthValue()) {
-
-									due.setDecember((int) Math
-											.round(((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent)) / 31)
-													* rentEndDate.getDayOfMonth()));
-								} else {
+								if (escalationApplyDate.isAfter(rentEndDate)
+										|| escalationApplyDate.isEqual(rentEndDate)) {
 									due.setDecember((int) Math.round((monthlyRent / 31) * rentEndDate.getDayOfMonth()));
+								} else {
+									double rentafter = ((monthlyRent + ((escalationPercent / 100.0f) * monthlyRent))
+											/ 31) * ((31 - (escalationApplyDate.getDayOfMonth()) + 1));
+									double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
+									due.setDecember((int) Math.round(rentafter + rentbefor));
 								}
 							} else
 								due.setDecember((int) Math.round(monthlyRent));
@@ -1370,7 +1438,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setJanuary((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent & escalation Date modify as per Updated Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setJanuary((int) Math.round(monthlyRent));
@@ -1390,7 +1458,7 @@ public class RentController {
 							double rentbefor = ((monthlyRent / day) * (escalationApplyDate.getDayOfMonth() - 1));
 							due.setFebruary((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setFebruary((int) Math.round(monthlyRent));
@@ -1403,7 +1471,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setMarch((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setMarch((int) Math.round(monthlyRent));
@@ -1416,7 +1484,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setApril((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setApril((int) Math.round(monthlyRent));
@@ -1429,7 +1497,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setMay((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setMay((int) Math.round(monthlyRent));
@@ -1442,7 +1510,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setJune((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setJune((int) Math.round(monthlyRent));
@@ -1456,7 +1524,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setJuly((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setJuly((int) Math.round(monthlyRent));
@@ -1469,7 +1537,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setAugust((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setAugust((int) Math.round(monthlyRent));
@@ -1482,7 +1550,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setSeptember((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setSeptember((int) Math.round(monthlyRent));
@@ -1496,7 +1564,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setOctober((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setOctober((int) Math.round(monthlyRent));
@@ -1509,7 +1577,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 30) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setNovember((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setNovember((int) Math.round(monthlyRent));
@@ -1523,7 +1591,7 @@ public class RentController {
 							double rentbefor = (monthlyRent / 31) * (escalationApplyDate.getDayOfMonth() - 1);
 							due.setDecember((int) Math.round(rentafter + rentbefor));
 							// Here Monthly rent modify as per Escalation.
-							escalationApplyDate = escalationApplyDate.plusMonths(11);
+							escalationApplyDate = escalationApplyDate.plusMonths((long) data.getEscalatedMonth());
 							monthlyRent = (monthlyRent + ((escalationPercent / 100.0f) * monthlyRent));
 						} else {
 							due.setDecember((int) Math.round(monthlyRent));
@@ -1686,7 +1754,7 @@ public class RentController {
 							row.createCell(1).setCellValue(item.getContractInfo().getAgreementActivationStatus());
 							row.createCell(2).setCellValue(item.getBranchID());
 							row.createCell(3).setCellValue(item.getContractInfo().getLesseeBranchName());
-							row.createCell(4).setCellValue(item.getContractInfo().getLessorRecipiantsName());
+							row.createCell(4).setCellValue(item.getContractInfo().getLessorName());
 							row.createCell(5).setCellValue(item.getContractInfo().getLessorBankName());
 							row.createCell(6).setCellValue(item.getContractInfo().getLessorIfscNumber());
 							row.createCell(7).setCellValue(item.getContractInfo().getLessorAccountNumber());
@@ -1712,7 +1780,7 @@ public class RentController {
 						row.createCell(1).setCellValue(D.getContractInfo().getAgreementActivationStatus());
 						row.createCell(2).setCellValue(D.getBranchID());
 						row.createCell(3).setCellValue(D.getContractInfo().getLesseeBranchName());
-						row.createCell(4).setCellValue(D.getContractInfo().getLessorRecipiantsName());
+						row.createCell(4).setCellValue(D.getContractInfo().getLessorName());
 						row.createCell(5).setCellValue(D.getContractInfo().getLessorBankName());
 						row.createCell(6).setCellValue(D.getContractInfo().getLessorIfscNumber());
 						row.createCell(7).setCellValue(D.getContractInfo().getLessorAccountNumber());
@@ -1748,7 +1816,7 @@ public class RentController {
 							row.createCell(1).setCellValue(D.getContractInfo().getAgreementActivationStatus());
 							row.createCell(2).setCellValue(D.getBranchID());
 							row.createCell(3).setCellValue(D.getContractInfo().getLesseeBranchName());
-							row.createCell(4).setCellValue(D.getContractInfo().getLessorRecipiantsName());
+							row.createCell(4).setCellValue(D.getContractInfo().getLessorName());
 							row.createCell(5).setCellValue(D.getContractInfo().getLessorBankName());
 							row.createCell(6).setCellValue(D.getContractInfo().getLessorIfscNumber());
 							row.createCell(7).setCellValue(D.getContractInfo().getLessorAccountNumber());
