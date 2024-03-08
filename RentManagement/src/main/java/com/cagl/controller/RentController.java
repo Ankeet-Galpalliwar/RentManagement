@@ -65,6 +65,7 @@ import com.cagl.entity.ApiCallRecords;
 import com.cagl.entity.BranchDetail;
 import com.cagl.entity.IfscMaster;
 import com.cagl.entity.PaymentReport;
+import com.cagl.entity.RawPaymentReport;
 import com.cagl.entity.RentContract;
 import com.cagl.entity.RentDue;
 import com.cagl.entity.RfBranchMaster;
@@ -74,6 +75,7 @@ import com.cagl.entity.provision;
 import com.cagl.repository.ApiCallRepository;
 import com.cagl.repository.BranchDetailRepository;
 import com.cagl.repository.PaymentReportRepository;
+import com.cagl.repository.RawPaymentReportRepository;
 import com.cagl.repository.RentActualRepository;
 import com.cagl.repository.RentContractRepository;
 import com.cagl.repository.RfBrachRepository;
@@ -138,8 +140,11 @@ public class RentController {
 				allvariDtos.add(varianceDto);
 			});
 		}
-		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(allvariDtos).error(Boolean.FALSE)
-				.msg("ALL variance [" + contractID + "]").build());
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder()
+						.data(allvariDtos.stream().sorted(Comparator.comparing(varianceDto::getFlag))
+								.collect(Collectors.toList()))
+						.error(Boolean.FALSE).msg("ALL variance [" + contractID + "]").build());
 	}
 
 	@GetMapping("ifscinfo")
@@ -347,10 +352,21 @@ public class RentController {
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
 			@RequestParam String year) {
-//		if (contractID == null || month == null || year == null)
-//			return ResponseEntity.status(HttpStatus.OK).body(null);
+		if (contractID == null || month == null || year == null)
+			return ResponseEntity.status(HttpStatus.OK).body(null);
 		Responce responce = rentService.getPaymentReport(contractID, month, year);
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
+	}
+
+	@Autowired
+	RawPaymentReportRepository rawPaymentReportRepository;
+
+	@GetMapping("/generateRawPaymentReport")
+	public ResponseEntity<Responce> generateRawPaymentReport(@RequestParam String contractID,
+			@RequestParam String month, @RequestParam String year) {
+		List<RawPaymentReport> RawData = rawPaymentReportRepository.findByMonthAndYear(month, year);
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().data(RawData).msg("Raw Data fetched").error(Boolean.FALSE).build());
 	}
 
 	@GetMapping("getduereportUid") // Base on UniqueID
@@ -539,7 +555,8 @@ public class RentController {
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(save.getUniqueID() + "/" + save.getMonthlyRent()).build());
 
-			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID()).escalatedMonth(Double.parseDouble(save.getSchedulePrimesis())).contractID(save.getUniqueID())
+			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID())
+					.escalatedMonth(Double.parseDouble(save.getSchedulePrimesis())).contractID(save.getUniqueID())
 					.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
 					.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
 					.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
@@ -662,7 +679,7 @@ public class RentController {
 		if (startORend.equalsIgnoreCase("start"))
 			return LocalDate.parse(year + "-" + monthValueString + "-01");
 		else {
-			if(month.equalsIgnoreCase("February")) {
+			if (month.equalsIgnoreCase("February")) {
 				return LocalDate.parse(year + "-" + monthValueString + "-28");
 			}
 			return LocalDate.parse(year + "-" + monthValueString + "-30");
@@ -679,7 +696,8 @@ public class RentController {
 		// Get all pending Due Calculation ContractIDs
 		List<RentContract> allcontract = rentContractRepository.getduemakerIDs();
 		allcontract.stream().map(e -> {
-			return Rentduecalculation.builder().branchID(e.getBranchID()).escalatedMonth(Integer.parseInt(e.getSchedulePrimesis())).contractID(e.getUniqueID())
+			return Rentduecalculation.builder().branchID(e.getBranchID())
+					.escalatedMonth(Integer.parseInt(e.getSchedulePrimesis())).contractID(e.getUniqueID())
 					.escalation(e.getEscalation()).lesseeBranchType(e.getLesseeBranchType())
 					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
 					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
@@ -735,7 +753,7 @@ public class RentController {
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
-//				System.out.println(cID+"====>");
+				System.out.println(cID + "====>");
 				generatePaymentReport(cID, month, year);
 			});
 		return null;// return null to Exit..!
@@ -1609,14 +1627,15 @@ public class RentController {
 
 	}
 
-	int rno = 1;
+	int rno = 1;// To handle local static scope we declared as a Global
 
 	@GetMapping("/DownloadPaymentReport")
 	public ResponseEntity<InputStreamResource> ExcelDownload(@RequestParam String month, @RequestParam String year)
 			throws IOException {
-		List<PaymentReport> data = paymentReportRepository.findByMonthAndYear(month, year);
-		if (!data.isEmpty() & data != null) {
-
+		List<PaymentReport> collect = paymentReportRepository.findByMonthAndYear(month, year);
+		if (!collect.isEmpty() & collect != null) {
+			List<PaymentReport> data = collect.stream()
+					.sorted(Comparator.comparing(PaymentReport::getContractID).reversed()).collect(Collectors.toList());
 			// Create Excel Structure
 			SXSSFWorkbook workBook = new SXSSFWorkbook();
 			SXSSFSheet sheet = workBook.createSheet("My Data");

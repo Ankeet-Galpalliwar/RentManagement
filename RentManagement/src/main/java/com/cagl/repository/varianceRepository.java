@@ -17,5 +17,8 @@ public interface varianceRepository extends JpaRepository<Variance, String> {
 
 	public List<Variance> findByContractID(String contractID);
 
+	@Query(value = "SELECT sum(variance_amount) FROM Variance where flag<=:flag and contractid=:contractID", nativeQuery = true)
+	public String getoverallvarianceforpaymentReport(@Param("contractID") String contractID, @Param("flag") String flag);
+
 
 }
