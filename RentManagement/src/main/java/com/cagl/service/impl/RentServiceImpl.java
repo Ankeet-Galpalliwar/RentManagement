@@ -61,7 +61,7 @@ public class RentServiceImpl implements RentService {
 
 	@Autowired
 	RawPaymentReportRepository rawPaymentReportRepository;
-	
+
 	@Autowired
 	RentContractRepository rentContractRepository;
 
@@ -82,7 +82,6 @@ public class RentServiceImpl implements RentService {
 
 	@Autowired
 	RentActualRepository actualRepository;
-	
 
 	@Autowired
 	SDRecoardRepository sdRepository;
@@ -110,45 +109,69 @@ public class RentServiceImpl implements RentService {
 							.due(e.getDue()).Gross(e.getGross()).gstamt(e.getGST() + "").Info(rentContractDto)
 							.monthRent(e.getMonthlyRent()).monthYear(e.getMonth() + "/" + e.getYear())
 							.net(e.getNet() + "").provision(e.getProvision() + "").reporttds(e.getTds() + "").build();
-					if (e.getActualAmount().equalsIgnoreCase("--"))
-						PRDTo.setPaymentFlag(false);
-					else
-						PRDTo.setPaymentFlag(true);
-
+					try {
+						if (Double.parseDouble(e.getActualAmount()) != e.getGross())
+							PRDTo.setPaymentFlag(false);
+						else
+							PRDTo.setPaymentFlag(true);
+					} catch (Exception e2) {
+						// TODO: handle exception
+					}
 					prDto.add(PRDTo);
 				});
 			}
 			return Responce.builder().data(prDto).error(Boolean.FALSE).msg("Payment Report Data..!").build();
 		} else {
 			PaymentReportDto rawgeneratereport = generatePaymentreport(contractID, month, year, "Raw");
-			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year, "show");
-			if (!generatereport.getActualAmount().equalsIgnoreCase("--"))
-				generatereport.setPaymentFlag(false);
-			else
-				generatereport.setPaymentFlag(true);
-			// Here we are saving(Generated Payment Report) Data for audit purpose.
-			paymentReportRepository.save(PaymentReport.builder().branchID(generatereport.getInfo().getBranchID())
-					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
-					.contractID(contractID).due(generatereport.getDue()).Gross(generatereport.getGross())
-					.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
-					.monthlyRent(generatereport.getMonthRent()).net(Double.parseDouble(generatereport.getNet()))
-					.provision(Double.parseDouble(generatereport.getProvision()))
-					.ActualAmount(generatereport.getActualAmount())
-					.tds(Double.parseDouble(generatereport.getReporttds()))
-					.GST(Double.parseDouble(generatereport.getGstamt())).year(year).build());
-			
+
+			// =========make Auto Actual====================
+			ArrayList<MakeActualDto> actualDto = new ArrayList<>();
+			MakeActualDto build = MakeActualDto.builder().branchID(rawgeneratereport.getInfo().getBranchID())
+					.contractID(rawgeneratereport.getInfo().getUniqueID())
+					.endDate(rawgeneratereport.getInfo().getRentEndDate()).month(month)
+					.monthRent(rawgeneratereport.getMonthRent())
+					.startDate(rawgeneratereport.getInfo().getRentStartDate())
+					.tdsAmount(Double.parseDouble(rawgeneratereport.getReporttds())).year(Integer.parseInt(year))
+					.build();
+			if (rawgeneratereport.getActualAmount().equalsIgnoreCase("--")) {
+				build.setAmount(rawgeneratereport.getGross() + "");
+				actualDto.add(build);
+				makeactual(actualDto);
+				rawgeneratereport.setActualAmount(rawgeneratereport.getGross() + "");
+				System.out.println("make Actual hit sucessfully..!");
+
+			} else {
+				build.setAmount(rawgeneratereport.getActualAmount());
+				actualDto.add(build);
+				makeactual(actualDto);
+				System.out.println("make Actual hit sucessfully..!");
+
+			}
+
+//			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year, "show");
+//			// Here we are saving(Generated Payment Report) Data for audit purpose.
+//			paymentReportRepository.save(PaymentReport.builder().branchID(generatereport.getInfo().getBranchID())
+//					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
+//					.contractID(contractID).due(generatereport.getDue()).Gross(generatereport.getGross())
+//					.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
+//					.monthlyRent(generatereport.getMonthRent()).net(Double.parseDouble(generatereport.getNet()))
+//					.provision(Double.parseDouble(generatereport.getProvision()))
+//					.ActualAmount(generatereport.getActualAmount())
+//					.tds(Double.parseDouble(generatereport.getReporttds()))
+//					.GST(Double.parseDouble(generatereport.getGstamt())).year(year).build());
+
 			// Here we are saving(Generated RawPayment Report) Data for audit purpose.
-			rawPaymentReportRepository.save(RawPaymentReport.builder().branchID(rawgeneratereport.getInfo().getBranchID())
-					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
-					.contractID(contractID).due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
-					.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
-					.monthlyRent(rawgeneratereport.getMonthRent()).net(Double.parseDouble(rawgeneratereport.getNet()))
-					.provision(Double.parseDouble(rawgeneratereport.getProvision()))
-					.ActualAmount(rawgeneratereport.getActualAmount())
-					.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
-					.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
-			
-			
+//			rawPaymentReportRepository.save(RawPaymentReport.builder()
+//					.branchID(rawgeneratereport.getInfo().getBranchID())
+//					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
+//					.contractID(contractID).due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
+//					.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
+//					.monthlyRent(rawgeneratereport.getMonthRent()).net(Double.parseDouble(rawgeneratereport.getNet()))
+//					.provision(Double.parseDouble(rawgeneratereport.getProvision()))
+//					.ActualAmount(rawgeneratereport.getActualAmount())
+//					.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
+//					.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
+
 			return Responce.builder().data(rawgeneratereport).error(Boolean.FALSE).msg("Payment Report Data..!")
 					.build();
 		}
@@ -191,7 +214,7 @@ public class RentServiceImpl implements RentService {
 					pCondition = true;
 				}
 				if (flagDate.isAfter(now) || pCondition) {
-					responce.put(e.getContractID() + "", "NOT PAID Not Eligible");
+					responce.put("--", e.getContractID() + "NOT PAID Not Eligible");
 					return false;
 				} else {
 					return true;
@@ -230,7 +253,7 @@ public class RentServiceImpl implements RentService {
 							+ "' where rent_actualid='" + ID + "'";
 					int actualQueryResponce = jdbcTemplate1.update(actualQuery);
 					if (actualQueryResponce == 0)
-						responce.put(Data.getContractID() + "", "NOT PAID");
+						responce.put("--", Data.getContractID() + "NOT PAID");
 					else {
 						String paymentReport_Update_Query = "update payment_report set actual_amount='"
 								+ Data.getAmount() + "',tds=" + Data.getTdsAmount() + " where id='"
@@ -254,19 +277,53 @@ public class RentServiceImpl implements RentService {
 										.varianceAmount(Data.getMonthRent() - Double.parseDouble(Data.getAmount()))
 										.varianceID(Data.getContractID() + "-" + Data.getMonth() + "-" + Data.getYear())
 										.year(Data.getYear()).build());
-								// Payment Report Generated -> update Table
-								getPaymentReport(Data.getContractID() + "", Data.getMonth(), Data.getYear() + "");
+
 							} catch (ParseException e) {
 								e.printStackTrace();
 							}
 						}
+						// ========================================== Payment Report Generated -> update
+						// Table=====================
+						PaymentReportDto generatereport = generatePaymentreport(Data.getContractID() + "",
+								Data.getMonth() + "", Data.getYear() + "", "show");
+
+						// Here we are saving(Generated Payment Report) Data for audit purpose.
+						paymentReportRepository.save(PaymentReport.builder()
+								.branchID(generatereport.getInfo().getBranchID())
+								.contractInfo(rentContractRepository.findById(Data.getContractID()).get())
+								.contractID(Data.getContractID() + "").due(generatereport.getDue())
+								.Gross(generatereport.getGross())
+								.ID(Data.getContractID() + "" + "-" + generatereport.getMonthYear())
+								.month(Data.getMonth()).monthlyRent(generatereport.getMonthRent())
+								.net(Double.parseDouble(generatereport.getNet()))
+								.provision(Double.parseDouble(generatereport.getProvision()))
+								.ActualAmount(generatereport.getActualAmount())
+								.tds(Double.parseDouble(generatereport.getReporttds()))
+								.GST(Double.parseDouble(generatereport.getGstamt())).year(Data.getYear() + "").build());
+						// &&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+						PaymentReportDto rawgeneratereport = generatePaymentreport(Data.getContractID() + "",
+								Data.getMonth() + "", Data.getYear() + "", "Raw");
+						rawPaymentReportRepository
+								.save(RawPaymentReport.builder().branchID(rawgeneratereport.getInfo().getBranchID())
+										.contractInfo(rentContractRepository.findById(Data.getContractID()).get())
+										.contractID(Data.getContractID() + "").due(rawgeneratereport.getDue())
+										.Gross(rawgeneratereport.getGross())
+										.ID(Data.getContractID() + "-" + rawgeneratereport.getMonthYear())
+										.month(Data.getMonth() + "").monthlyRent(rawgeneratereport.getMonthRent())
+										.net(Double.parseDouble(rawgeneratereport.getNet()))
+										.provision(Double.parseDouble(rawgeneratereport.getProvision()))
+										.ActualAmount(rawgeneratereport.getActualAmount())
+										.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
+										.GST(Double.parseDouble(rawgeneratereport.getGstamt()))
+										.year(Data.getYear() + "").build());
+//						getPaymentReport(Data.getContractID() + "", Data.getMonth(), Data.getYear() + "");
 						// -------------------
-						responce.put(Data.getContractID() + "",
-								"PAID:-[Actual:" + Data.getAmount() + "|TDS:" + Data.getTdsAmount() + "]");
+						responce.put(Data.getAmount(), "PAID:-" + Data.getContractID() + "[Actual:" + Data.getAmount()
+								+ "|TDS:" + Data.getTdsAmount() + "]");
 
 					}
 				} catch (Exception e) {
-					responce.put(Data.getContractID() + "", "NOT PAID Invalid_Actual_Amount");
+					responce.put("--", Data.getContractID() + "NOT PAID Invalid_Actual_Amount");
 				}
 			});
 		}
@@ -444,19 +501,24 @@ public class RentServiceImpl implements RentService {
 //			}
 
 			// ----------TDS Value initiate---------
-			String tdsQuery = "SELECT " + month + " FROM tds e where e.contractid='" + contractID + "' and e.year='"
-					+ year + "'";
-			List<String> tdsValue = getvalue(tdsQuery);
-			if (!tdsValue.isEmpty() & tdsValue != null) {
-				String temptds = getvalue(tdsQuery).get(0);
-				if (reportType.equalsIgnoreCase("Raw")) {
-					tds = Double.parseDouble(temptds);
-				} else {
-					if (Double.parseDouble(temptds)> 0) {//
-						tds = Math.round(((10 / 100.0f) * gross));
-					}
-				}
-			}
+//			String tdsQuery = "SELECT " + month + " FROM tds e where e.contractid='" + contractID + "' and e.year='"
+//					+ year + "'";
+//			List<String> tdsValue = getvalue(tdsQuery);
+//			if (!tdsValue.isEmpty() & tdsValue != null) {
+//				String temptds = getvalue(tdsQuery).get(0);
+//				if (reportType.equalsIgnoreCase("Raw")) {
+//					tds = Double.parseDouble(temptds);
+//				} else {
+//					if (Double.parseDouble(temptds)> 0) {//
+//						tds = Math.round(((10 / 100.0f) * gross));
+//					}
+//				}
+//			}
+			// --------------------------------------
+
+			if (Double.parseDouble(rentContract.getTds()) > 0)
+				tds = Math.round(((Double.parseDouble(rentContract.getTds()) / 100.0f) * gross));
+
 			// ----------GST Value initiate-----------
 			double gstpercent = Double.parseDouble(rentContract.getGst());
 
@@ -476,9 +538,9 @@ public class RentServiceImpl implements RentService {
 		Exception e) {
 			System.out.println(e + "---------Exception---------");
 		}
-		System.out.println(PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthRent(MonthRent).net(Net + "")
-				.provision(provision + "").reporttds(tds + "").sdAmount(sdAmount).actualAmount(ActualAmount)
-				.gstamt(Gst + "").monthYear(month + "/" + year).build());
+		System.out.println(PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthRent(MonthRent)
+				.net(Net + "").provision(provision + "").reporttds(tds + "").sdAmount(sdAmount)
+				.actualAmount(ActualAmount).gstamt(Gst + "").monthYear(month + "/" + year).build());
 		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthRent(MonthRent).net(Net + "")
 				.provision(provision + "").reporttds(tds + "").sdAmount(sdAmount).actualAmount(ActualAmount)
 				.gstamt(Gst + "").monthYear(month + "/" + year).build();

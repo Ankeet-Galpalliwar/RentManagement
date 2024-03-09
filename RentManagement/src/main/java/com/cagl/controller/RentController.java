@@ -51,6 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.cagl.dto.BranchDto;
 import com.cagl.dto.BulkProvisionDeletion;
 import com.cagl.dto.MakeActualDto;
+import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RecipiantDto;
 import com.cagl.dto.RentContractDto;
 import com.cagl.dto.RentDueDto;
@@ -286,18 +287,18 @@ public class RentController {
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(provision.toString()).build());
 
-			String ActualUpdateQuery = "update payment_report set actual_amount=" + "'--'" + " where id='" + contractID
-					+ "-" + month + "/" + year + "'";
-			String tdsQuery = "update tds set " + month + "=" + 0 + " where rent_tdsid='" + contractID + "-" + year
-					+ "'";
-			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
-			jdbcTemplate.update(tdsQuery);
-			if (jdbcTemplate.update(ActualUpdateQuery) != 0) {
+//			String ActualUpdateQuery = "update payment_report set actual_amount=" + "'--'" + " where id='" + contractID
+//					+ "-" + month + "/" + year + "'";
+//			String tdsQuery = "update tds set " + month + "=" + 0 + " where rent_tdsid='" + contractID + "-" + year
+//					+ "'";
+//			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
+//			jdbcTemplate.update(tdsQuery);
+//			if (jdbcTemplate.update(ActualUpdateQuery) != 0) {
 				Optional<Variance> optationaVariance = varianceRepository
 						.findById(contractID + "-" + month + "-" + year);
 				if (optationaVariance.isPresent())
 					varianceRepository.delete(optationaVariance.get());
-			}
+//			}
 
 			/**
 			 * ---Delete Record from Payment Report--- AFTER THAT.
@@ -309,12 +310,13 @@ public class RentController {
 				paymentReportRepository.deleteById(contractID + "-" + month + "/" + year);
 			} catch (Exception e) {
 			}
-
 			// ------Reset Actual Value---------
 			String actualID = contractID + "-" + year;
 			String query = "update rent_actual set " + month + "=" + "'--'" + " where rent_actualid='" + actualID + "'";
 			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
 			jdbcTemplate.update(query);
+			//----------Generate Payment Report-----
+			generatePaymentReport(contractID, month, year+"");
 			return "PROVISION DELETION DONE " + contractID + "-" + month + "/" + year;
 		} catch (Exception e) {
 			return "PROVISION DELETION FAILED" + contractID + "-" + month + "/" + year + "[ " + e.getMessage() + " ]";
@@ -364,9 +366,31 @@ public class RentController {
 	@GetMapping("/generateRawPaymentReport")
 	public ResponseEntity<Responce> generateRawPaymentReport(@RequestParam String contractID,
 			@RequestParam String month, @RequestParam String year) {
-		List<RawPaymentReport> RawData = rawPaymentReportRepository.findByMonthAndYear(month, year);
+		List<RawPaymentReport> data = rawPaymentReportRepository.findByMonthAndYear(month, year);
+		List<PaymentReportDto> prDto = new ArrayList<>();
+		if (data != null) {
+
+			data.stream().forEach(e -> {
+				RentContractDto rentContractDto = new RentContractDto();
+				BeanUtils.copyProperties(e.getContractInfo(), rentContractDto);
+				PaymentReportDto PRDTo = PaymentReportDto.builder().actualAmount(e.getActualAmount())
+						.due(e.getDue()).Gross(e.getGross()).gstamt(e.getGST() + "").Info(rentContractDto)
+						.monthRent(e.getMonthlyRent()).monthYear(e.getMonth() + "/" + e.getYear())
+						.net(e.getNet() + "").provision(e.getProvision() + "").reporttds(e.getTds() + "").build();
+				try {
+					if (Double.parseDouble(e.getActualAmount()) != e.getGross())
+						PRDTo.setPaymentFlag(false);
+					else
+						PRDTo.setPaymentFlag(true);
+				} catch (Exception e2) {
+					// TODO: handle exception
+				}
+
+				prDto.add(PRDTo);
+			});
+		}
 		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(RawData).msg("Raw Data fetched").error(Boolean.FALSE).build());
+				.body(Responce.builder().data(prDto).msg("Raw Data fetched").error(Boolean.FALSE).build());
 	}
 
 	@GetMapping("getduereportUid") // Base on UniqueID
@@ -540,11 +564,11 @@ public class RentController {
 			 * @NOTE:->In above condition [SchedulePrimesis] field is use As a Escalated
 			 * Month for Rent_Due Calculation
 			 */
-			List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
-			unusedDueData.stream().forEach(due -> {
-				dueRepository.delete(due);
-			});
-			flagCheck = true;// if (True) Changes done in RentDue orElse no need to change any thing
+//			List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
+//			unusedDueData.stream().forEach(due -> {
+//				dueRepository.delete(due);
+//			});
+//			flagCheck = true;// if (True) Changes done in RentDue orElse no need to change any thing
 		}
 		BeanUtils.copyProperties(contractDto, rentContract);
 		rentContract.setUniqueID(uniqueID);
@@ -555,11 +579,11 @@ public class RentController {
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(save.getUniqueID() + "/" + save.getMonthlyRent()).build());
 
-			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID())
-					.escalatedMonth(Double.parseDouble(save.getSchedulePrimesis())).contractID(save.getUniqueID())
-					.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
-					.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
-					.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
+//			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID())
+//					.escalatedMonth(Double.parseDouble(save.getSchedulePrimesis())).contractID(save.getUniqueID())
+//					.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
+//					.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
+//					.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
 		}
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().error(Boolean.FALSE).msg("Edit Sucessfully..!").data(contractDto).build());
@@ -702,7 +726,7 @@ public class RentController {
 					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
 					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
 		}).collect(Collectors.toList()).stream().forEach(data -> {
-			System.out.println(data.getContractID() + "========");
+//			System.out.println(data.getContractID() + "========");
 			createRentdue(data);
 		});
 		return true;
