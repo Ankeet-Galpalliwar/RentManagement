@@ -39,6 +39,7 @@ public class PaymentReport {
 	private String ActualAmount;
 	private String contractID;
 	private String branchID;
+	private boolean Redflag;//Base on Raw_Report Actual And Gross Difference
 
 	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "contractInfo")

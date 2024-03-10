@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -38,7 +39,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -86,7 +86,6 @@ import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
 import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
-import com.cagl.service.impl.RentServiceImpl;
 
 /**
  * @author Ankeet G.
@@ -294,10 +293,9 @@ public class RentController {
 //			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
 //			jdbcTemplate.update(tdsQuery);
 //			if (jdbcTemplate.update(ActualUpdateQuery) != 0) {
-				Optional<Variance> optationaVariance = varianceRepository
-						.findById(contractID + "-" + month + "-" + year);
-				if (optationaVariance.isPresent())
-					varianceRepository.delete(optationaVariance.get());
+			Optional<Variance> optationaVariance = varianceRepository.findById(contractID + "-" + month + "-" + year);
+			if (optationaVariance.isPresent())
+				varianceRepository.delete(optationaVariance.get());
 //			}
 
 			/**
@@ -315,8 +313,8 @@ public class RentController {
 			String query = "update rent_actual set " + month + "=" + "'--'" + " where rent_actualid='" + actualID + "'";
 			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
 			jdbcTemplate.update(query);
-			//----------Generate Payment Report-----
-			generatePaymentReport(contractID, month, year+"");
+			// ----------Generate Payment Report-----
+			generatePaymentReport(contractID, month, year + "");
 			return "PROVISION DELETION DONE " + contractID + "-" + month + "/" + year;
 		} catch (Exception e) {
 			return "PROVISION DELETION FAILED" + contractID + "-" + month + "/" + year + "[ " + e.getMessage() + " ]";
@@ -373,10 +371,10 @@ public class RentController {
 			data.stream().forEach(e -> {
 				RentContractDto rentContractDto = new RentContractDto();
 				BeanUtils.copyProperties(e.getContractInfo(), rentContractDto);
-				PaymentReportDto PRDTo = PaymentReportDto.builder().actualAmount(e.getActualAmount())
-						.due(e.getDue()).Gross(e.getGross()).gstamt(e.getGST() + "").Info(rentContractDto)
-						.monthRent(e.getMonthlyRent()).monthYear(e.getMonth() + "/" + e.getYear())
-						.net(e.getNet() + "").provision(e.getProvision() + "").reporttds(e.getTds() + "").build();
+				PaymentReportDto PRDTo = PaymentReportDto.builder().actualAmount(e.getActualAmount()).due(e.getDue())
+						.Gross(e.getGross()).gstamt(e.getGST() + "").Info(rentContractDto).monthRent(e.getMonthlyRent())
+						.monthYear(e.getMonth() + "/" + e.getYear()).net(e.getNet() + "")
+						.provision(e.getProvision() + "").reporttds(e.getTds() + "").build();
 				try {
 					if (Double.parseDouble(e.getActualAmount()) != e.getGross())
 						PRDTo.setPaymentFlag(false);
@@ -703,10 +701,8 @@ public class RentController {
 		if (startORend.equalsIgnoreCase("start"))
 			return LocalDate.parse(year + "-" + monthValueString + "-01");
 		else {
-			if (month.equalsIgnoreCase("February")) {
-				return LocalDate.parse(year + "-" + monthValueString + "-28");
-			}
-			return LocalDate.parse(year + "-" + monthValueString + "-30");
+			LocalDate tempDate = LocalDate.parse(year + "-" + monthValueString + "-01");
+			return tempDate.with(TemporalAdjusters.lastDayOfMonth());
 		}
 	}
 
@@ -757,7 +753,6 @@ public class RentController {
 		} catch (Exception e) {
 		}
 		// To avoid unused contract object flag date is use in Query.
-
 		LocalDate SflagDate = getFlagDate(month, Integer.parseInt(year), "Start");
 		LocalDate EflagDate = getFlagDate(month, Integer.parseInt(year), "End");
 
@@ -777,7 +772,7 @@ public class RentController {
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
-				System.out.println(cID + "====>");
+//				System.out.println(cID + "====>");
 				generatePaymentReport(cID, month, year);
 			});
 		return null;// return null to Exit..!
