@@ -304,10 +304,10 @@ public class RentController {
 			 * @ones We make Again Actual updated monthly report added
 			 *       in @Payment_Report_Table
 			 **/
-			try {
-				paymentReportRepository.deleteById(contractID + "-" + month + "/" + year);
-			} catch (Exception e) {
-			}
+//			try {
+//				paymentReportRepository.deleteById(contractID + "-" + month + "/" + year);
+//			} catch (Exception e) {
+//			}
 			// ------Reset Actual Value---------
 			String actualID = contractID + "-" + year;
 			String query = "update rent_actual set " + month + "=" + "'--'" + " where rent_actualid='" + actualID + "'";
@@ -353,9 +353,11 @@ public class RentController {
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
 			@RequestParam String year, @RequestParam String purpose) {
-		if (contractID == null || month == null || year == null)
-			return ResponseEntity.status(HttpStatus.OK).body(null);
-		Responce responce = rentService.getPaymentReport(contractID, month, year,purpose);
+//		if (contractID.equalsIgnoreCase("null") || month.equalsIgnoreCase("null") || year.equalsIgnoreCase("null")
+//				|| purpose.equalsIgnoreCase("null"))
+//			return ResponseEntity.status(HttpStatus.OK)
+//					.body(Responce.builder().data(null).msg("Unused API Hit..!").build());
+		Responce responce = rentService.getPaymentReport(contractID, month, year, purpose);
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
 
@@ -774,7 +776,7 @@ public class RentController {
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
 //				System.out.println(cID + "====>");
-				generatePaymentReport(cID, month, year,"make");
+				generatePaymentReport(cID, month, year, "make");
 			});
 		return null;// return null to Exit..!
 	}

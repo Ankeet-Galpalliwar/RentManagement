@@ -121,6 +121,7 @@ public class RentServiceImpl implements RentService {
 			PaymentReportDto rawgeneratereport = generatePaymentreport(contractID, month, year, "Raw");
 
 			// =========make Auto Actual====================
+			if(purpose.equalsIgnoreCase("make")) {
 			ArrayList<MakeActualDto> actualDto = new ArrayList<>();
 			MakeActualDto build = MakeActualDto.builder().branchID(rawgeneratereport.getInfo().getBranchID())
 					.contractID(rawgeneratereport.getInfo().getUniqueID())
@@ -142,6 +143,7 @@ public class RentServiceImpl implements RentService {
 				makeactual(actualDto);
 //				System.out.println("make Actual hit sucessfully..!");
 
+			}
 			}
 
 //			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year, "show");
@@ -275,34 +277,34 @@ public class RentServiceImpl implements RentService {
 							}
 						}
 						// ------------(Erase Next Month Actuals And Variance)----------------
-//						LocalDate nextMonthFlagDate = null;
-//						try {
-//							nextMonthFlagDate = getFlagDate(Data.getMonth(), Data.getYear(), "start").plusMonths(1);
-//						} catch (ParseException e1) {
-//						}
-//						ID = Data.getContractID() + "-" + nextMonthFlagDate.getYear();
-//						try {
-//							String nextactualQuery = "update rent_actual set " + nextMonthFlagDate.getMonth() + "='"
-//									+ "--" + "' where rent_actualid='" + ID + "'";
-//							jdbcTemplate1.update(nextactualQuery);
-//							Optional<Variance> nextMonthOptationaVariance = varianceRepository
-//									.findById(Data.getContractID() + "-" + nextMonthFlagDate.getMonth() + "-"
-//											+ nextMonthFlagDate.getYear());
-//							if (nextMonthOptationaVariance.isPresent())
-//								varianceRepository.delete(nextMonthOptationaVariance.get());
-//							Optional<RawPaymentReport> rawData = rawPaymentReportRepository
-//									.findById(Data.getContractID() + "-" + nextMonthFlagDate.getMonth() + "/"
-//											+ nextMonthFlagDate.getYear());
-//							if (rawData.isPresent())
-//								rawPaymentReportRepository.delete(rawData.get());
-//							Optional<PaymentReport> paymentreportData = paymentReportRepository
-//									.findById(Data.getContractID() + "-" + nextMonthFlagDate.getMonth() + "/"
-//											+ nextMonthFlagDate.getYear());
-//							if (paymentreportData.isPresent())
-//								paymentReportRepository.delete(paymentreportData.get());
-//						} catch (Exception e) {
-//							// TODO: handle exception
-//						}
+						LocalDate nextMonthFlagDate = null;
+						try {
+							nextMonthFlagDate = getFlagDate(Data.getMonth(), Data.getYear(), "start").plusMonths(1);
+						} catch (ParseException e1) {
+						}
+						ID = Data.getContractID() + "-" + nextMonthFlagDate.getYear();
+						try {
+							String nextactualQuery = "update rent_actual set " + nextMonthFlagDate.getMonth() + "='"
+									+ "--" + "' where rent_actualid='" + ID + "'";
+							jdbcTemplate1.update(nextactualQuery);
+							Optional<Variance> nextMonthOptationaVariance = varianceRepository
+									.findById(Data.getContractID() + "-" + nextMonthFlagDate.getMonth() + "-"
+											+ nextMonthFlagDate.getYear());
+							if (nextMonthOptationaVariance.isPresent())
+								varianceRepository.delete(nextMonthOptationaVariance.get());
+							Optional<RawPaymentReport> rawData = rawPaymentReportRepository
+									.findById(Data.getContractID() + "-" + nextMonthFlagDate.getMonth() + "/"
+											+ nextMonthFlagDate.getYear());
+							if (rawData.isPresent())
+								rawPaymentReportRepository.delete(rawData.get());
+							Optional<PaymentReport> paymentreportData = paymentReportRepository
+									.findById(Data.getContractID() + "-" + nextMonthFlagDate.getMonth() + "/"
+											+ nextMonthFlagDate.getYear());
+							if (paymentreportData.isPresent())
+								paymentReportRepository.delete(paymentreportData.get());
+						} catch (Exception e) {
+							// TODO: handle exception
+						}
 
 						// ========== Payment Report Generated -> update Table=====================
 
@@ -375,7 +377,7 @@ public class RentServiceImpl implements RentService {
 		provision save = provisionRepository.save(provision);
 		if (save != null) {
 			// once provision make Payment data updated if Exist or else its create new one.
-			getPaymentReport(provisionDto.getContractID(), provisionDto.getMonth(), provisionDto.getYear() + "");
+			getPaymentReport(provisionDto.getContractID(), provisionDto.getMonth(), provisionDto.getYear() + "","make");
 		}
 		BeanUtils.copyProperties(save, provisionDto);
 
@@ -507,7 +509,7 @@ public class RentServiceImpl implements RentService {
 				if (overAllVariance != null) {// & !overAllVariance.isEmpty()
 					DueValue += Double.parseDouble(overAllVariance);
 				}
-			} else {
+			} else {//for view_payment Report.
 				String overAllVariance = varianceRepository.getoverallvarianceforpaymentReport(contractID,
 						flagDate + "");
 				if (overAllVariance != null) {// & !overAllVariance.isEmpty()
