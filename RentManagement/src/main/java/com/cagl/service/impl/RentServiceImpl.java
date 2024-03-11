@@ -3,7 +3,6 @@ package com.cagl.service.impl;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.Month;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -13,15 +12,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.Font;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.xssf.streaming.SXSSFCell;
-import org.apache.poi.xssf.streaming.SXSSFRow;
-import org.apache.poi.xssf.streaming.SXSSFSheet;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -96,7 +86,7 @@ public class RentServiceImpl implements RentService {
 	private JdbcTemplate jdbcTemplate1;
 
 	@Override
-	public Responce getPaymentReport(String contractID, String month, String year,String purpose) {
+	public Responce getPaymentReport(String contractID, String month, String year, String purpose) {
 		if (contractID.equalsIgnoreCase("all")) {
 			List<PaymentReport> data = paymentReportRepository.findByMonthAndYear(month, year);
 			List<PaymentReportDto> prDto = new ArrayList<>();
@@ -121,29 +111,29 @@ public class RentServiceImpl implements RentService {
 			PaymentReportDto rawgeneratereport = generatePaymentreport(contractID, month, year, "Raw");
 
 			// =========make Auto Actual====================
-			if(purpose.equalsIgnoreCase("make")) {
-			ArrayList<MakeActualDto> actualDto = new ArrayList<>();
-			MakeActualDto build = MakeActualDto.builder().branchID(rawgeneratereport.getInfo().getBranchID())
-					.contractID(rawgeneratereport.getInfo().getUniqueID())
-					.endDate(rawgeneratereport.getInfo().getRentEndDate()).month(month)
-					.monthRent(rawgeneratereport.getMonthRent())
-					.startDate(rawgeneratereport.getInfo().getRentStartDate())
-					.tdsAmount(Double.parseDouble(rawgeneratereport.getReporttds())).year(Integer.parseInt(year))
-					.build();
-			if (rawgeneratereport.getActualAmount().equalsIgnoreCase("--")) {
-				build.setAmount(rawgeneratereport.getGross() + "");
-				actualDto.add(build);
-				makeactual(actualDto);
-				rawgeneratereport.setActualAmount(rawgeneratereport.getGross() + "");
+			if (purpose.equalsIgnoreCase("make")) {
+				ArrayList<MakeActualDto> actualDto = new ArrayList<>();
+				MakeActualDto build = MakeActualDto.builder().branchID(rawgeneratereport.getInfo().getBranchID())
+						.contractID(rawgeneratereport.getInfo().getUniqueID())
+						.endDate(rawgeneratereport.getInfo().getRentEndDate()).month(month)
+						.monthRent(rawgeneratereport.getMonthRent())
+						.startDate(rawgeneratereport.getInfo().getRentStartDate())
+						.tdsAmount(Double.parseDouble(rawgeneratereport.getReporttds())).year(Integer.parseInt(year))
+						.build();
+				if (rawgeneratereport.getActualAmount().equalsIgnoreCase("--")) {
+					build.setAmount(rawgeneratereport.getGross() + "");
+					actualDto.add(build);
+					makeactual(actualDto);
+					rawgeneratereport.setActualAmount(rawgeneratereport.getGross() + "");
 //				System.out.println("make Actual hit sucessfully..!");
 
-			} else {
-				build.setAmount(rawgeneratereport.getActualAmount());
-				actualDto.add(build);
-				makeactual(actualDto);
+				} else {
+					build.setAmount(rawgeneratereport.getActualAmount());
+					actualDto.add(build);
+					makeactual(actualDto);
 //				System.out.println("make Actual hit sucessfully..!");
 
-			}
+				}
 			}
 
 //			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year, "show");
@@ -220,7 +210,7 @@ public class RentServiceImpl implements RentService {
 			}).forEach(Data -> {
 
 				try {
-					
+
 					Double.parseDouble(Data.getAmount());// To avoid Alphanumeric and Execute Catch Block
 
 					String ID = Data.getContractID() + "-" + Data.getYear();
@@ -377,7 +367,8 @@ public class RentServiceImpl implements RentService {
 		provision save = provisionRepository.save(provision);
 		if (save != null) {
 			// once provision make Payment data updated if Exist or else its create new one.
-			getPaymentReport(provisionDto.getContractID(), provisionDto.getMonth(), provisionDto.getYear() + "","make");
+			getPaymentReport(provisionDto.getContractID(), provisionDto.getMonth(), provisionDto.getYear() + "",
+					"make");
 		}
 		BeanUtils.copyProperties(save, provisionDto);
 
@@ -509,7 +500,7 @@ public class RentServiceImpl implements RentService {
 				if (overAllVariance != null) {// & !overAllVariance.isEmpty()
 					DueValue += Double.parseDouble(overAllVariance);
 				}
-			} else {//for view_payment Report.
+			} else {// for view_payment Report.
 				String overAllVariance = varianceRepository.getoverallvarianceforpaymentReport(contractID,
 						flagDate + "");
 				if (overAllVariance != null) {// & !overAllVariance.isEmpty()
@@ -563,11 +554,8 @@ public class RentServiceImpl implements RentService {
 		} catch (
 
 		Exception e) {
-			System.out.println(e + "---------Exception---------");
+			throw new com.cagl.customexceptation.PaymentReport("Can't Generate Payment Report..!");
 		}
-//		System.out.println(PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthRent(MonthRent)
-//				.net(Net + "").provision(provision + "").reporttds(tds + "").sdAmount(sdAmount)
-//				.actualAmount(ActualAmount).gstamt(Gst + "").monthYear(month + "/" + year).build());
 		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthRent(MonthRent).net(Net + "")
 				.provision(provision + "").reporttds(tds + "").sdAmount(sdAmount).actualAmount(ActualAmount)
 				.gstamt(Gst + "").monthYear(month + "/" + year).build();
