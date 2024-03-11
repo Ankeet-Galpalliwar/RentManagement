@@ -96,7 +96,7 @@ public class RentServiceImpl implements RentService {
 	private JdbcTemplate jdbcTemplate1;
 
 	@Override
-	public Responce getPaymentReport(String contractID, String month, String year) {
+	public Responce getPaymentReport(String contractID, String month, String year,String purpose) {
 		if (contractID.equalsIgnoreCase("all")) {
 			List<PaymentReport> data = paymentReportRepository.findByMonthAndYear(month, year);
 			List<PaymentReportDto> prDto = new ArrayList<>();
@@ -184,13 +184,13 @@ public class RentServiceImpl implements RentService {
 			LocalDate now = LocalDate.now();
 
 			actualDto.stream().filter(e -> {
-				LocalDate flagDate = null;
 				boolean pCondition = false;//
-
+				LocalDate flagDate = null;
 				try {
 					flagDate = getFlagDate(e.getMonth(), e.getYear(), "start");
 				} catch (ParseException e1) {
 				}
+
 				// ====Get Previous Month Value =======
 				/**
 				 * @check ->IF previous Month Actual not done then not allowed to make Actual(If
@@ -218,6 +218,7 @@ public class RentServiceImpl implements RentService {
 			}).forEach(Data -> {
 
 				try {
+					
 					Double.parseDouble(Data.getAmount());// To avoid Alphanumeric and Execute Catch Block
 
 					String ID = Data.getContractID() + "-" + Data.getYear();
@@ -251,11 +252,6 @@ public class RentServiceImpl implements RentService {
 					if (actualQueryResponce == 0)
 						responce.put("--", Data.getContractID() + "NOT PAID");
 					else {
-						String paymentReport_Update_Query = "update payment_report set actual_amount='"
-								+ Data.getAmount() + "',tds=" + Data.getTdsAmount() + " where id='"
-								+ Data.getContractID() + "-" + Data.getMonth() + "/" + Data.getYear() + "'";
-						jdbcTemplate1.update(paymentReport_Update_Query);
-
 						// ----Modify Variance-----{BASE ON ACTUALAMOUNT)
 						Optional<Variance> optationaVariance = varianceRepository
 								.findById(Data.getContractID() + "-" + Data.getMonth() + "-" + Data.getYear());
@@ -278,6 +274,36 @@ public class RentServiceImpl implements RentService {
 								e.printStackTrace();
 							}
 						}
+						// ------------(Erase Next Month Actuals And Variance)----------------
+//						LocalDate nextMonthFlagDate = null;
+//						try {
+//							nextMonthFlagDate = getFlagDate(Data.getMonth(), Data.getYear(), "start").plusMonths(1);
+//						} catch (ParseException e1) {
+//						}
+//						ID = Data.getContractID() + "-" + nextMonthFlagDate.getYear();
+//						try {
+//							String nextactualQuery = "update rent_actual set " + nextMonthFlagDate.getMonth() + "='"
+//									+ "--" + "' where rent_actualid='" + ID + "'";
+//							jdbcTemplate1.update(nextactualQuery);
+//							Optional<Variance> nextMonthOptationaVariance = varianceRepository
+//									.findById(Data.getContractID() + "-" + nextMonthFlagDate.getMonth() + "-"
+//											+ nextMonthFlagDate.getYear());
+//							if (nextMonthOptationaVariance.isPresent())
+//								varianceRepository.delete(nextMonthOptationaVariance.get());
+//							Optional<RawPaymentReport> rawData = rawPaymentReportRepository
+//									.findById(Data.getContractID() + "-" + nextMonthFlagDate.getMonth() + "/"
+//											+ nextMonthFlagDate.getYear());
+//							if (rawData.isPresent())
+//								rawPaymentReportRepository.delete(rawData.get());
+//							Optional<PaymentReport> paymentreportData = paymentReportRepository
+//									.findById(Data.getContractID() + "-" + nextMonthFlagDate.getMonth() + "/"
+//											+ nextMonthFlagDate.getYear());
+//							if (paymentreportData.isPresent())
+//								paymentReportRepository.delete(paymentreportData.get());
+//						} catch (Exception e) {
+//							// TODO: handle exception
+//						}
+
 						// ========== Payment Report Generated -> update Table=====================
 
 						PaymentReportDto rawgeneratereport = generatePaymentreport(Data.getContractID() + "",

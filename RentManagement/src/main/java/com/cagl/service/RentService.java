@@ -17,6 +17,6 @@ public interface RentService {
 
 	Responce getprovision(String flag, String year);
 
-	Responce getPaymentReport(String contractID, String month, String year);
+	Responce getPaymentReport(String contractID, String month, String year, String purpose);
 
 }

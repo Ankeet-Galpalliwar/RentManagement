@@ -314,7 +314,7 @@ public class RentController {
 			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
 			jdbcTemplate.update(query);
 			// ----------Generate Payment Report-----
-			generatePaymentReport(contractID, month, year + "");
+			generatePaymentReport(contractID, month, year + "", "make");
 			return "PROVISION DELETION DONE " + contractID + "-" + month + "/" + year;
 		} catch (Exception e) {
 			return "PROVISION DELETION FAILED" + contractID + "-" + month + "/" + year + "[ " + e.getMessage() + " ]";
@@ -347,14 +347,15 @@ public class RentController {
 	 * @param contractID-> ALL AND CID(7000)
 	 * @param month
 	 * @param year
+	 * @param purpose      -> view(Don't hit actual_API & make(Hit Actual_API)
 	 * @return
 	 */
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
-			@RequestParam String year) {
+			@RequestParam String year, @RequestParam String purpose) {
 		if (contractID == null || month == null || year == null)
 			return ResponseEntity.status(HttpStatus.OK).body(null);
-		Responce responce = rentService.getPaymentReport(contractID, month, year);
+		Responce responce = rentService.getPaymentReport(contractID, month, year,purpose);
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
 
@@ -773,7 +774,7 @@ public class RentController {
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
 //				System.out.println(cID + "====>");
-				generatePaymentReport(cID, month, year);
+				generatePaymentReport(cID, month, year,"make");
 			});
 		return null;// return null to Exit..!
 	}
