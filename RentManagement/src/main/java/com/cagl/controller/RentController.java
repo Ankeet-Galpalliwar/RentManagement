@@ -12,6 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
@@ -86,6 +87,8 @@ import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
 import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
+
+import net.bytebuddy.asm.Advice.Local;
 
 /**
  * @author Ankeet G.
@@ -199,25 +202,28 @@ public class RentController {
 		Optional<provision> optionalProvision = provisionRepository
 				.findById(sdrecord.getContractID() + "-" + sdrecord.getMonth() + "/" + sdrecord.getYear());
 		if (optionalProvision.isPresent())
-			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(optionalProvision.get())
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(optionalProvision.get())
 					.error(Boolean.TRUE).msg(" Cant't make SD provision Already Exist").build());
 
 		RentContract rentContract = rentContractRepository.findById(sdrecord.getContractID()).get();
 		// If month Year not match Send conflict Error in ResponSe
-		if (!(rentContract.getRentEndDate().getMonth() + "").equalsIgnoreCase(sdrecord.getMonth())
-				|| !(rentContract.getRentEndDate().getYear() + "").equalsIgnoreCase(sdrecord.getYear() + "")) {
-			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(null).error(Boolean.TRUE)
+		if (LocalDate.now().isAfter(rentContract.getRentEndDate())) {
+			ResponseEntity<Responce> responce = addprovison("REVERSED",
+					provisionDto.builder().branchID(rentContract.getBranchID())
+							.contractID(sdrecord.getContractID() + "").dateTime(LocalDate.now())
+							.month(sdrecord.getMonth()).provisionAmount(sdrecord.getSdAmount())
+							.provisiontype("REVERSED").remark("SD RETURN" + sdrecord.getRemark())
+							.year(sdrecord.getYear()).build());
+			if (responce.getStatusCode() == HttpStatus.CONFLICT)
+				return ResponseEntity.status(HttpStatus.OK)
+						.body(Responce.builder().data(null).error(Boolean.FALSE).msg("SD SETTLEMENT FAIL..!").build());
+			else
+				return ResponseEntity.status(HttpStatus.OK)
+						.body(Responce.builder().data(null).error(Boolean.FALSE).msg("SD SETTLEMENT DONE..!").build());
+		} else {
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(null).error(Boolean.TRUE)
 					.msg("Cant't make SD [RENT END DATE CONFLICT]").build());
 		}
-		SDRecords save = sdRepository.save(SDRecords.builder().contractID(sdrecord.getContractID() + "")
-				.flag(getFlagDate(sdrecord.getMonth(), sdrecord.getYear(), "start")).month(sdrecord.getMonth())
-				.year(sdrecord.getYear()).remark(sdrecord.getRemark()).sdAmount(sdrecord.getSdAmount())
-				.sdID(sdrecord.getContractID() + "-" + sdrecord.getMonth() + "/" + sdrecord.getYear())
-				.timeZone(LocalDate.now() + "").build());
-
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(save).error(Boolean.FALSE).msg("SD SETTLEMENT DONE..!").build());
-
 	}
 
 	@PostMapping("makeactual")
@@ -286,33 +292,17 @@ public class RentController {
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(provision.toString()).build());
 
-//			String ActualUpdateQuery = "update payment_report set actual_amount=" + "'--'" + " where id='" + contractID
-//					+ "-" + month + "/" + year + "'";
-//			String tdsQuery = "update tds set " + month + "=" + 0 + " where rent_tdsid='" + contractID + "-" + year
-//					+ "'";
-//			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
-//			jdbcTemplate.update(tdsQuery);
-//			if (jdbcTemplate.update(ActualUpdateQuery) != 0) {
-			Optional<Variance> optationaVariance = varianceRepository.findById(contractID + "-" + month + "-" + year);
-			if (optationaVariance.isPresent())
-				varianceRepository.delete(optationaVariance.get());
-//			}
-
 			/**
 			 * ---Delete Record from Payment Report--- AFTER THAT.
 			 * 
-			 * @ones We make Again Actual updated monthly report added
+			 * @ones We make Again Actual with '--' updated monthly report & Delete Variance
 			 *       in @Payment_Report_Table
 			 **/
-//			try {
-//				paymentReportRepository.deleteById(contractID + "-" + month + "/" + year);
-//			} catch (Exception e) {
-//			}
-			// ------Reset Actual Value---------
-			String actualID = contractID + "-" + year;
-			String query = "update rent_actual set " + month + "=" + "'--'" + " where rent_actualid='" + actualID + "'";
-			jdbcTemplate.execute("SET SQL_SAFE_UPDATES = 0");
-			jdbcTemplate.update(query);
+			// ------Reset Actual & TDS Value & Variance---------
+			List<MakeActualDto> dto = new ArrayList<>();
+			dto.add(MakeActualDto.builder().amount("--").month(month).year(year)
+					.contractID(Integer.parseInt(contractID)).build());
+			makeActual(dto);
 			// ----------Generate Payment Report-----
 			generatePaymentReport(contractID, month, year + "", "make");
 			return "PROVISION DELETION DONE " + contractID + "-" + month + "/" + year;
@@ -353,10 +343,6 @@ public class RentController {
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
 			@RequestParam String year, @RequestParam String purpose) {
-//		if (contractID.equalsIgnoreCase("null") || month.equalsIgnoreCase("null") || year.equalsIgnoreCase("null")
-//				|| purpose.equalsIgnoreCase("null"))
-//			return ResponseEntity.status(HttpStatus.OK)
-//					.body(Responce.builder().data(null).msg("Unused API Hit..!").build());
 		Responce responce = rentService.getPaymentReport(contractID, month, year, purpose);
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
@@ -692,7 +678,7 @@ public class RentController {
 
 	// =======================GENERATE FLAG DATE ===========================
 
-	public LocalDate getFlagDate(String month, int year, String startORend) throws ParseException {
+	public static LocalDate getFlagDate(String month, int year, String startORend) throws ParseException {
 		String monthInput = month;
 		SimpleDateFormat sdfInput = new SimpleDateFormat("MMMM");
 		Date date = sdfInput.parse(monthInput);
@@ -725,7 +711,6 @@ public class RentController {
 					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
 					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
 		}).collect(Collectors.toList()).stream().forEach(data -> {
-//			System.out.println(data.getContractID() + "========");
 			createRentdue(data);
 		});
 		return true;
@@ -745,7 +730,8 @@ public class RentController {
 	}
 
 	@PostMapping("/ModifyPaymentReport")
-	public String modifyPaymentReport(@RequestParam String month, @RequestParam String year) throws ParseException {
+	public Set<String> modifyPaymentReport(@RequestParam String month, @RequestParam String year)
+			throws ParseException {
 		// ---API CALL RECORD SAVE---
 		apirecords.save(ApiCallRecords.builder().apiname("ModifyPaymentReport")
 				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now())).build());
@@ -758,6 +744,8 @@ public class RentController {
 		// To avoid unused contract object flag date is use in Query.
 		LocalDate SflagDate = getFlagDate(month, Integer.parseInt(year), "Start");
 		LocalDate EflagDate = getFlagDate(month, Integer.parseInt(year), "End");
+//		System.out.println(SflagDate);
+//		System.out.println(EflagDate);
 
 		List<String> getcontractIDs = rentContractRepository.getcontractIDs(SflagDate + "", EflagDate + "");
 //      some time out of Start_End Date also payment is there -> Query Use to take Actual Table & provision_Table CID.
@@ -772,13 +760,14 @@ public class RentController {
 		IDs.addAll(getcontractIDs);
 //		IDs.addAll(getcontractIDsActualTable);
 		IDs.addAll(ProvisionIDs);
+
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
-//				System.out.println(cID + "====>");
 				generatePaymentReport(cID, month, year, "make");
 			});
-		return null;// return null to Exit..!
+
+		return IDs;// return null to Exit..!
 	}
 
 	// ================DUE CLCULATION LOGIC=================
@@ -1810,8 +1799,8 @@ public class RentController {
 							row.createCell(16).setCellValue(item.getNet());
 							row.createCell(17).setCellValue(item.getGST());
 							SXSSFCell actualcell = row.createCell(18);
-							if (item.getActualAmount().equalsIgnoreCase("--")) {
-								actualcell.setCellStyle(cellstyle);
+							if (item.isRedflag()) {
+//								actualcell.setCellStyle(cellstyle);
 							}
 							actualcell.setCellValue(item.getActualAmount());
 						});
@@ -1839,9 +1828,8 @@ public class RentController {
 						row.createCell(16).setCellValue(linkedcontract.getNet() + D.getNet());
 						row.createCell(17).setCellValue(linkedcontract.getGST() + D.getGST());
 						SXSSFCell actualcell = row.createCell(18);
-						if (linkedcontract.getActualAmount().equalsIgnoreCase("--")
-								|| D.getActualAmount().equalsIgnoreCase("--")) {
-							actualcell.setCellStyle(cellstyle);
+						if (linkedcontract.isRedflag() || D.isRedflag()) {
+//							actualcell.setCellStyle(cellstyle);
 						}
 						try {
 							actualcell.setCellValue(Double.parseDouble(linkedcontract.getActualAmount())
@@ -1872,8 +1860,8 @@ public class RentController {
 							row.createCell(16).setCellValue(D.getNet());
 							row.createCell(17).setCellValue(D.getGST());
 							SXSSFCell actualcell = row.createCell(18);
-							if (D.getActualAmount().equalsIgnoreCase("--")) {
-								actualcell.setCellStyle(cellstyle);
+							if (D.isRedflag()) {
+//								actualcell.setCellStyle(cellstyle);
 							}
 							actualcell.setCellValue(D.getActualAmount());
 						}

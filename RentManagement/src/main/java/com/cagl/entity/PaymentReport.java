@@ -14,6 +14,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Getter
@@ -43,6 +44,7 @@ public class PaymentReport {
 
 	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "contractInfo")
+	@ToString.Exclude
 	private RentContract contractInfo;
 
 }
