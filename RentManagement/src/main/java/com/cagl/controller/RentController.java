@@ -12,7 +12,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
@@ -65,13 +64,13 @@ import com.cagl.dto.provisionDto;
 import com.cagl.dto.varianceDto;
 import com.cagl.entity.ApiCallRecords;
 import com.cagl.entity.BranchDetail;
+import com.cagl.entity.ConfirmPaymentReport;
 import com.cagl.entity.IfscMaster;
 import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RawPaymentReport;
 import com.cagl.entity.RentContract;
 import com.cagl.entity.RentDue;
 import com.cagl.entity.RfBranchMaster;
-import com.cagl.entity.SDRecords;
 import com.cagl.entity.Variance;
 import com.cagl.entity.provision;
 import com.cagl.repository.ApiCallRepository;
@@ -87,8 +86,6 @@ import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
 import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
-
-import net.bytebuddy.asm.Advice.Local;
 
 /**
  * @author Ankeet G.
@@ -226,19 +223,25 @@ public class RentController {
 		}
 	}
 
+	@Autowired
+	ConfirmPaymentReport confirmPaymentReport;
+
 	@PostMapping("makeactual")
-	public ResponseEntity<Responce> makeActual(@RequestBody List<MakeActualDto> ActualDto) {
-		Map<String, String> responce = rentService.makeactual(ActualDto);
+	public ResponseEntity<Responce> makeActual(@RequestParam String Status,
+			@RequestBody List<MakeActualDto> ActualDto) {
+		Map<String, String> responce = rentService.makeactual(Status, ActualDto);
 		// ---API CALL RECORD SAVE---
-		try {
-			apirecords.save(ApiCallRecords.builder().apiname("makeactual")
-					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-					.msg(ActualDto.toString() + "Responce=>" + responce.toString()).build());
-		} catch (Exception e) {
-			// --> IF MSG Field Large.
-			apirecords.save(ApiCallRecords.builder().apiname("makeactual")
-					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-					.msg(ActualDto.toString()).build());
+		if (!Status.equalsIgnoreCase("CONFIRM")) {
+			try {
+				apirecords.save(ApiCallRecords.builder().apiname("makeactual")
+						.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+						.msg(ActualDto.toString() + "Responce=>" + responce.toString()).build());
+			} catch (Exception e) {
+				// --> IF MSG Field Large.
+				apirecords.save(ApiCallRecords.builder().apiname("makeactual")
+						.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+						.msg(ActualDto.toString()).build());
+			}
 		}
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(responce).error(Boolean.FALSE).msg("Actual Done").build());
@@ -302,7 +305,7 @@ public class RentController {
 			List<MakeActualDto> dto = new ArrayList<>();
 			dto.add(MakeActualDto.builder().amount("--").month(month).year(year)
 					.contractID(Integer.parseInt(contractID)).build());
-			makeActual(dto);
+			makeActual("NOTCONFIRM", dto);
 			// ----------Generate Payment Report-----
 			generatePaymentReport(contractID, month, year + "", "make");
 			return "PROVISION DELETION DONE " + contractID + "-" + month + "/" + year;

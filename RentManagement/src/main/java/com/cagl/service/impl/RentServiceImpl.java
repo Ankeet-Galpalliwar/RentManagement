@@ -25,6 +25,7 @@ import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RentContractDto;
 import com.cagl.dto.Responce;
 import com.cagl.dto.provisionDto;
+import com.cagl.entity.ConfirmPaymentReport;
 import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RawPaymentReport;
 import com.cagl.entity.RentContract;
@@ -40,6 +41,7 @@ import com.cagl.repository.RentContractRepository;
 import com.cagl.repository.RfBrachRepository;
 import com.cagl.repository.SDRecoardRepository;
 import com.cagl.repository.TdsRepository;
+import com.cagl.repository.confirmPaymentRepository;
 import com.cagl.repository.ifscMasterRepository;
 import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
@@ -111,7 +113,7 @@ public class RentServiceImpl implements RentService {
 			return Responce.builder().data(prDto).error(Boolean.FALSE).msg("Payment Report Data..!").build();
 		} else {
 			PaymentReportDto rawgeneratereport = generatePaymentreport(contractID, month, year, "Raw");
-			System.out.println(purpose + "-->" + contractID);
+//			System.out.println(purpose + "-->" + contractID);
 			// =========make Auto Actual====================
 			if (purpose.equalsIgnoreCase("make")) {
 				ArrayList<MakeActualDto> actualDto = new ArrayList<>();
@@ -125,14 +127,12 @@ public class RentServiceImpl implements RentService {
 				if (rawgeneratereport.getActualAmount().equalsIgnoreCase("--")) {
 					build.setAmount(rawgeneratereport.getGross() + "");
 					actualDto.add(build);
-					makeactual(actualDto);
+					makeactual("NOTCONFIRM", actualDto);
 //					ModifyReports(contractID, month, year);
-//					System.out.println("in---------------==");
 				} else {
-//					System.out.println("out==============--");
 					build.setAmount(rawgeneratereport.getActualAmount());
 					actualDto.add(build);
-					makeactual(actualDto);
+					makeactual("NOTCONFIRM", actualDto);
 				}
 			}
 			return Responce.builder().data(rawgeneratereport).error(Boolean.FALSE).msg("Payment Report Data..!")
@@ -143,8 +143,11 @@ public class RentServiceImpl implements RentService {
 	@Autowired
 	TdsRepository tdsRepository;
 
+	@Autowired
+	confirmPaymentRepository confirmPaymentRepository;
+
 	@Override
-	public Map<String, String> makeactual(List<MakeActualDto> actualDto) {
+	public Map<String, String> makeactual(String status, List<MakeActualDto> actualDto) {
 		Map<String, String> responce = new HashMap<>();// use for response
 		if (!actualDto.isEmpty() & actualDto != null) {
 			// Get on by one Actual Data
@@ -265,7 +268,8 @@ public class RentServiceImpl implements RentService {
 									e.printStackTrace();
 								}
 							}
-							// -------------------
+							// -----------------------------------
+
 							responce.put(Data.getAmount(), "PAID:-" + Data.getContractID() + "[Actual:"
 									+ Data.getAmount() + "|TDS:" + Data.getTdsAmount() + "]");
 						}
@@ -312,7 +316,7 @@ public class RentServiceImpl implements RentService {
 					}
 					// ========== Payment Report Generated -> update Table=====================
 					// Here we are saving(Generated Payment Report) Data for audit purpose.
-					ModifyReports(Data.getContractID() + "", Data.getMonth(), Data.getYear() + "");
+					ModifyReports(Data.getContractID() + "", Data.getMonth(), Data.getYear() + "", status);
 				}
 
 			});
@@ -320,7 +324,9 @@ public class RentServiceImpl implements RentService {
 		return responce;
 	}
 
-	public void ModifyReports(String contractID, String month, String year) {
+	public void ModifyReports(String contractID, String month, String year, String status) {// if Status is
+																							// confirm->Store Data in
+																							// confirm Table.
 		PaymentReportDto rawgeneratereport = generatePaymentreport(contractID, month, year, "Raw");
 		// Here we are saving(Generated Payment Report) Data for audit purpose.
 		rawPaymentReportRepository.save(RawPaymentReport.builder().branchID(rawgeneratereport.getInfo().getBranchID())
@@ -357,12 +363,9 @@ public class RentServiceImpl implements RentService {
 		 * Additional Requirement
 		 */
 
-		System.out.println("0000000000000000000000000000000000000");
-		
-		provision provision = provisionRepository.findByContractIDAndYearAndMonthAndProvisiontype(contractID, Integer.parseInt(year), month,
-				"REVERSED");
-		System.out.println("11111111111111111111111111111111111111" + provision);
-		if (provision == null) {
+		provision Reversedprovision = provisionRepository.findByContractIDAndYearAndMonthAndProvisiontype(contractID,
+				Integer.parseInt(year), month, "REVERSED");
+		if (Reversedprovision == null) {
 
 //		if (rawgeneratereport.getGross() == 0
 //				|| !(((int) rawgeneratereport.getGross() + "")).equalsIgnoreCase(rawgeneratereport.getActualAmount())) {
@@ -372,23 +375,34 @@ public class RentServiceImpl implements RentService {
 				flag = false;
 			}
 			// Here we are saving(Generated Payment Report) Data for audit purpose.
-			System.out
-					.println(
-							paymentReportRepository
-									.save(PaymentReport.builder().Redflag(flag)
-											.branchID(rawgeneratereport.getInfo().getBranchID())
-											.contractInfo(
-													rentContractRepository.findById(Integer.parseInt(contractID)).get())
-											.contractID(contractID).due(rawgeneratereport.getDue())
-											.Gross(rawgeneratereport.getGross())
-											.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
-											.monthlyRent(rawgeneratereport.getMonthRent())
-											.net(Double.parseDouble(rawgeneratereport.getNet()))
-											.provision(Double.parseDouble(rawgeneratereport.getProvision()))
-											.ActualAmount(rawgeneratereport.getActualAmount())
-											.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
-											.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build())
-									+ "=============");
+
+			paymentReportRepository.save(PaymentReport.builder().Redflag(flag)
+					.branchID(rawgeneratereport.getInfo().getBranchID())
+					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
+					.contractID(contractID).due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
+					.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
+					.monthlyRent(rawgeneratereport.getMonthRent()).net(Double.parseDouble(rawgeneratereport.getNet()))
+					.provision(Double.parseDouble(rawgeneratereport.getProvision()))
+					.ActualAmount(rawgeneratereport.getActualAmount())
+					.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
+					.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
+
+			if (status.equalsIgnoreCase("CONFIRM")) {
+// -------------------At confirm payment option Data Store in confirmPayment Table---------
+
+				confirmPaymentRepository
+						.save(ConfirmPaymentReport.builder().ActualAmount(rawgeneratereport.getActualAmount())
+								.branchID(rawgeneratereport.getInfo().getBranchID()).contractID(contractID)
+								.due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
+								.GST(Double.parseDouble(rawgeneratereport.getGstamt()))
+								.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
+								.monthlyRent(rawgeneratereport.getMonthRent())
+								.net(Double.parseDouble(rawgeneratereport.getNet()))
+								.provision(Double.parseDouble(rawgeneratereport.getProvision()))
+								.tds(Double.parseDouble(rawgeneratereport.getReporttds())).year(year).build());
+
+			}
+
 		} else {
 
 			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year, "show");
@@ -397,33 +411,40 @@ public class RentServiceImpl implements RentService {
 				flag = false;
 			}
 			// Here we are saving(Generated Payment Report) Data for audit purpose.
-			System.out
-					.println(
-							paymentReportRepository
-									.save(PaymentReport.builder().Redflag(flag)
-											.branchID(generatereport.getInfo().getBranchID())
-											.contractInfo(
-													rentContractRepository.findById(Integer.parseInt(contractID)).get())
-											.contractID(contractID).due(generatereport.getDue())
-											.Gross(generatereport.getGross())
-											.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
-											.monthlyRent(generatereport.getMonthRent())
-											.net(Double.parseDouble(generatereport.getNet()))
-											.provision(Double.parseDouble(generatereport.getProvision()))
-											.ActualAmount(generatereport.getActualAmount())
-											.tds(Double.parseDouble(generatereport.getReporttds()))
-											.GST(Double.parseDouble(generatereport.getGstamt())).year(year).build())
-									+ "===========");
+
+			paymentReportRepository
+					.save(PaymentReport.builder().Redflag(flag).branchID(generatereport.getInfo().getBranchID())
+							.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
+							.contractID(contractID).due(generatereport.getDue()).Gross(generatereport.getGross())
+							.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
+							.monthlyRent(generatereport.getMonthRent()).net(Double.parseDouble(generatereport.getNet()))
+							.provision(Double.parseDouble(generatereport.getProvision()))
+							.ActualAmount(generatereport.getActualAmount())
+							.tds(Double.parseDouble(generatereport.getReporttds()))
+							.GST(Double.parseDouble(generatereport.getGstamt())).year(year).build());
+
+			if (status.equalsIgnoreCase("CONFIRM")) {
+// -------------------At confirm payment option Data Store in confirmPayment Table---------
+
+				confirmPaymentRepository.save(ConfirmPaymentReport.builder()
+						.ActualAmount(generatereport.getActualAmount()).branchID(generatereport.getInfo().getBranchID())
+						.contractID(contractID).due(generatereport.getDue()).Gross(generatereport.getGross())
+						.GST(Double.parseDouble(generatereport.getGstamt()))
+						.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
+						.monthlyRent(generatereport.getMonthRent()).net(Double.parseDouble(generatereport.getNet()))
+						.provision(Double.parseDouble(generatereport.getProvision()))
+						.tds(Double.parseDouble(generatereport.getReporttds())).year(year).build());
+
+			}
 		}
 
 	}
 
 	@Override
 	public provisionDto addprovision(String provisionType, provisionDto provisionDto) {
-
 		provision provision = new provision();
 		BeanUtils.copyProperties(provisionDto, provision);
-		if (provisionType.equalsIgnoreCase("REVERSED")||provisionType.equalsIgnoreCase("Reverse"))
+		if (provisionType.equalsIgnoreCase("REVERSED") || provisionType.equalsIgnoreCase("Reverse"))
 			provision.setProvisionAmount(-provisionDto.getProvisionAmount());
 		provision.setDateTime(LocalDate.now());
 		provision.setProvisiontype(provisionType);

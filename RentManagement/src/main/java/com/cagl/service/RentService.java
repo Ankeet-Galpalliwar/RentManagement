@@ -11,7 +11,7 @@ import com.cagl.dto.provisionDto;
 
 public interface RentService {
 
-	Map<String, String> makeactual(List<MakeActualDto> actualDto);
+	Map<String, String> makeactual(String Status,List<MakeActualDto> actualDto);
 
 	provisionDto addprovision(String provisionType, provisionDto provisionDto);
 
