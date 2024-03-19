@@ -205,8 +205,8 @@ public class RentController {
 		RentContract rentContract = rentContractRepository.findById(sdrecord.getContractID()).get();
 		// If month Year not match Send conflict Error in ResponSe
 		if (LocalDate.now().isAfter(rentContract.getRentEndDate())) {
-			ResponseEntity<Responce> responce = addprovison("REVERSED",
-					provisionDto.builder().branchID(rentContract.getBranchID())
+			ResponseEntity<Responce> responce = addprovison("REVERSED", // SD reversed always PAID.
+					provisionDto.builder().branchID(rentContract.getBranchID()).paymentFlag("PAID")
 							.contractID(sdrecord.getContractID() + "").dateTime(LocalDate.now())
 							.month(sdrecord.getMonth()).provisionAmount(sdrecord.getSdAmount())
 							.provisiontype("REVERSED").remark("SD RETURN" + sdrecord.getRemark())
@@ -222,9 +222,6 @@ public class RentController {
 					.msg("Cant't make SD [RENT END DATE CONFLICT]").build());
 		}
 	}
-
-	@Autowired
-	ConfirmPaymentReport confirmPaymentReport;
 
 	@PostMapping("makeactual")
 	public ResponseEntity<Responce> makeActual(@RequestParam String Status,

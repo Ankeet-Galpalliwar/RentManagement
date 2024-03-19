@@ -26,5 +26,7 @@ public class provisionDto {
 	private RentContractDto info;
 	//field is use for to give Delete Option
 	private  boolean deleteFlag;
+	//In reversed_provision->Middle payment Done or not
+	private String paymentFlag;
 
 }

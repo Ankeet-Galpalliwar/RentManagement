@@ -32,6 +32,7 @@ public class provision {
 	private String remark;
 	private LocalDate dateTime;
 	private LocalDate flag;
+	private String paymentFlag;
 	
 	
 

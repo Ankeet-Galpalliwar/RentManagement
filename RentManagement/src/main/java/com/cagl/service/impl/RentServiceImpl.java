@@ -199,7 +199,7 @@ public class RentServiceImpl implements RentService {
 								.findById(Data.getContractID() + "-" + Data.getMonth() + "-" + Data.getYear());
 						if (OptationaVariance.isPresent())
 							varianceRepository.delete(OptationaVariance.get());
-						// --------------Erase next Moth_TDS-------------
+						// --------------Erase Moth_TDS if exist-------------
 						try {
 							String tdsQuery = "update tds set " + Data.getMonth() + "=0 where rent_tdsid='" + ID + "'";
 							jdbcTemplate1.update(tdsQuery);
@@ -363,48 +363,13 @@ public class RentServiceImpl implements RentService {
 		 * Additional Requirement
 		 */
 
-		provision Reversedprovision = provisionRepository.findByContractIDAndYearAndMonthAndProvisiontype(contractID,
-				Integer.parseInt(year), month, "REVERSED");
-		if (Reversedprovision == null) {
-
 //		if (rawgeneratereport.getGross() == 0
 //				|| !(((int) rawgeneratereport.getGross() + "")).equalsIgnoreCase(rawgeneratereport.getActualAmount())) {
 
-			boolean flag = true;
-			if (rawgeneratereport.getActualAmount().equalsIgnoreCase("--")) {
-				flag = false;
-			}
-			// Here we are saving(Generated Payment Report) Data for audit purpose.
-
-			paymentReportRepository.save(PaymentReport.builder().Redflag(flag)
-					.branchID(rawgeneratereport.getInfo().getBranchID())
-					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
-					.contractID(contractID).due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
-					.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
-					.monthlyRent(rawgeneratereport.getMonthRent()).net(Double.parseDouble(rawgeneratereport.getNet()))
-					.provision(Double.parseDouble(rawgeneratereport.getProvision()))
-					.ActualAmount(rawgeneratereport.getActualAmount())
-					.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
-					.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
-
-			if (status.equalsIgnoreCase("CONFIRM")) {
-// -------------------At confirm payment option Data Store in confirmPayment Table---------
-
-				confirmPaymentRepository
-						.save(ConfirmPaymentReport.builder().ActualAmount(rawgeneratereport.getActualAmount())
-								.branchID(rawgeneratereport.getInfo().getBranchID()).contractID(contractID)
-								.due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
-								.GST(Double.parseDouble(rawgeneratereport.getGstamt()))
-								.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
-								.monthlyRent(rawgeneratereport.getMonthRent())
-								.net(Double.parseDouble(rawgeneratereport.getNet()))
-								.provision(Double.parseDouble(rawgeneratereport.getProvision()))
-								.tds(Double.parseDouble(rawgeneratereport.getReporttds())).year(year).build());
-
-			}
-
-		} else {
-
+		provision Reversedprovision = provisionRepository.findByContractIDAndYearAndMonthAndProvisiontype(contractID,
+				Integer.parseInt(year), month, "REVERSED");
+		if (Reversedprovision != null & Reversedprovision.getPaymentFlag().equalsIgnoreCase("PAID")) {
+			// ..................................
 			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year, "show");
 			boolean flag = true;
 			if (generatereport.getActualAmount().equalsIgnoreCase("--")) {
@@ -434,10 +399,38 @@ public class RentServiceImpl implements RentService {
 						.monthlyRent(generatereport.getMonthRent()).net(Double.parseDouble(generatereport.getNet()))
 						.provision(Double.parseDouble(generatereport.getProvision()))
 						.tds(Double.parseDouble(generatereport.getReporttds())).year(year).build());
+			}
+		} else {
+			boolean flag = true;
+			if (rawgeneratereport.getActualAmount().equalsIgnoreCase("--")) {
+				flag = false;
+			}
+			// Here we are saving(Generated Payment Report) Data for audit purpose.
+			paymentReportRepository.save(PaymentReport.builder().Redflag(flag)
+					.branchID(rawgeneratereport.getInfo().getBranchID())
+					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
+					.contractID(contractID).due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
+					.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
+					.monthlyRent(rawgeneratereport.getMonthRent()).net(Double.parseDouble(rawgeneratereport.getNet()))
+					.provision(Double.parseDouble(rawgeneratereport.getProvision()))
+					.ActualAmount(rawgeneratereport.getActualAmount())
+					.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
+					.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
+			if (status.equalsIgnoreCase("CONFIRM")) {
+// -------------------At confirm payment option Data Store in confirmPayment Table---------
 
+				confirmPaymentRepository
+						.save(ConfirmPaymentReport.builder().ActualAmount(rawgeneratereport.getActualAmount())
+								.branchID(rawgeneratereport.getInfo().getBranchID()).contractID(contractID)
+								.due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
+								.GST(Double.parseDouble(rawgeneratereport.getGstamt()))
+								.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
+								.monthlyRent(rawgeneratereport.getMonthRent())
+								.net(Double.parseDouble(rawgeneratereport.getNet()))
+								.provision(Double.parseDouble(rawgeneratereport.getProvision()))
+								.tds(Double.parseDouble(rawgeneratereport.getReporttds())).year(year).build());
 			}
 		}
-
 	}
 
 	@Override
@@ -459,27 +452,17 @@ public class RentServiceImpl implements RentService {
 		provision save = provisionRepository.save(provision);
 		if (save != null) {
 			// -----Erase already Exist Data------
-			Optional<Variance> optationaVariance = varianceRepository.findById(
-					provisionDto.getContractID() + "-" + provisionDto.getMonth() + "-" + provisionDto.getYear());
-			if (optationaVariance.isPresent())
-				varianceRepository.delete(optationaVariance.get());
-
-			try {
-				String actualID = provisionDto.getContractID() + "-" + provisionDto.getYear();
-				String query = "update rent_actual set " + provisionDto.getMonth() + "=" + "'--'"
-						+ " where rent_actualid='" + actualID + "'";
-				jdbcTemplate1.execute("SET SQL_SAFE_UPDATES = 0");
-				jdbcTemplate1.update(query);
-			} catch (Exception e) {
-			}
-			// once provision make Payment data updated if Exist or else its create new one.
-			getPaymentReport(provisionDto.getContractID(), provisionDto.getMonth(), provisionDto.getYear() + "",
-					"make");
+			ArrayList<MakeActualDto> actualDto = new ArrayList<>();
+			RentContract rentContract = rentContractRepository.findById(Integer.parseInt(provisionDto.getContractID()))
+					.get();
+			actualDto.add(
+					MakeActualDto.builder().branchID(rentContract.getBranchID()).contractID(rentContract.getUniqueID())
+							.endDate(rentContract.getRentEndDate()).month(provisionDto.getMonth()).amount("--")
+							.startDate(rentContract.getRentStartDate()).year(provisionDto.getYear()).build());
+			makeactual("NOTCONFIRM", actualDto);
 		}
 		BeanUtils.copyProperties(save, provisionDto);
-
 		return provisionDto;
-
 	}
 
 	@Override
@@ -495,7 +478,6 @@ public class RentServiceImpl implements RentService {
 								.findById(Integer.parseInt(e.getContractID()));
 						if (optionalContract.isPresent())
 							BeanUtils.copyProperties(optionalContract.get(), contractdto);
-
 						provisionDto dto = new provisionDto();
 						BeanUtils.copyProperties(e, dto);
 						dto.setInfo(contractdto);
@@ -505,10 +487,8 @@ public class RentServiceImpl implements RentService {
 							dto.setDeleteFlag(true);
 						else
 							dto.setDeleteFlag(false);
-
 						return dto;
 					}).collect(Collectors.toList());
-
 			return Responce.builder().data(allprovisionDto).error(Boolean.FALSE).msg("All provision").build();
 		} else {// HERE WE ARE NOT USEING YEAR FIELD...!
 			List<provision> allprovision = provisionRepository.findByContractID(flag);
