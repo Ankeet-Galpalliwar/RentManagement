@@ -14,5 +14,6 @@ class RentManagementApplicationTests {
 //clone
 //main
 //..SC
+//main code
 
 }
