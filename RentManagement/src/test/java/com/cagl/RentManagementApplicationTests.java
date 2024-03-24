@@ -12,5 +12,5 @@ class RentManagementApplicationTests {
 
 //hii cloanb1
 //clone
-//main
+//main code
 }
