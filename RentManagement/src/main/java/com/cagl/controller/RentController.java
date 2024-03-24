@@ -711,6 +711,7 @@ public class RentController {
 					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
 					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
 		}).collect(Collectors.toList()).stream().forEach(data -> {
+//			System.out.println(data.getContractID()+"---");
 			createRentdue(data);
 		});
 		return true;
@@ -764,6 +765,7 @@ public class RentController {
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
+//				System.out.println(cID+"-&->");
 				generatePaymentReport(cID, month, year, "make");
 			});
 
@@ -1680,67 +1682,83 @@ public class RentController {
 			cellu.setCellStyle(cellStyle);
 			cellu.setCellValue("Office_Name");
 
-			SXSSFCell cell3 = header.createCell(4);
+			SXSSFCell branchType = header.createCell(4);
+			branchType.setCellStyle(cellStyle);
+			branchType.setCellValue("Branch_Type");
+
+			SXSSFCell zonecell = header.createCell(5);
+			zonecell.setCellStyle(cellStyle);
+			zonecell.setCellValue("Zone_Name");
+
+			SXSSFCell regioncell = header.createCell(6);
+			regioncell.setCellStyle(cellStyle);
+			regioncell.setCellValue("Region_Name");
+
+			SXSSFCell statecell = header.createCell(7);
+			statecell.setCellStyle(cellStyle);
+			statecell.setCellValue("State");
+
+			SXSSFCell cell3 = header.createCell(8);
 			cell3.setCellStyle(cellStyle);
 			cell3.setCellValue("lessor_Name");
 
-			SXSSFCell cell4 = header.createCell(5);
+			SXSSFCell cell4 = header.createCell(9);
 			cell4.setCellStyle(cellStyle);
 			cell4.setCellValue("Bank_Name");
 
-			SXSSFCell cell5 = header.createCell(6);
+			SXSSFCell cell5 = header.createCell(10);
 			cell5.setCellStyle(cellStyle);
 			cell5.setCellValue("IFSC");
 
-			SXSSFCell cell6 = header.createCell(7);
+			SXSSFCell cell6 = header.createCell(11);
 			cell6.setCellStyle(cellStyle);
 			cell6.setCellValue("Account_Number");
 
-			SXSSFCell cell7 = header.createCell(8);
+			SXSSFCell cell7 = header.createCell(12);
 			cell7.setCellStyle(cellStyle);
 			cell7.setCellValue("Rent_Start_Date");
 
-			SXSSFCell cell8 = header.createCell(9);
+			SXSSFCell cell8 = header.createCell(13);
 			cell8.setCellStyle(cellStyle);
 			cell8.setCellValue("Rent_End_Date");
 
-			SXSSFCell cell9 = header.createCell(10);
+			SXSSFCell cell9 = header.createCell(14);
 			cell9.setCellStyle(cellStyle);
 			cell9.setCellValue("Initial_MonthRent");
 
-			SXSSFCell cell10 = header.createCell(11);
+			SXSSFCell cell10 = header.createCell(15);
 			cell10.setCellStyle(cellStyle);
 			cell10.setCellValue("Current_MonthRent");
 
-			SXSSFCell cell11 = header.createCell(12);
+			SXSSFCell cell11 = header.createCell(16);
 			cell11.setCellStyle(cellStyle);
 			cell11.setCellValue("Due");
 
-			SXSSFCell cell12 = header.createCell(13);
+			SXSSFCell cell12 = header.createCell(17);
 			cell12.setCellStyle(cellStyle);
 			cell12.setCellValue("Provision");
 
-			SXSSFCell cell13 = header.createCell(14);
+			SXSSFCell cell13 = header.createCell(18);
 			cell13.setCellStyle(cellStyle);
 			cell13.setCellValue("Gross");
 
-			SXSSFCell cell14 = header.createCell(15);
+			SXSSFCell cell14 = header.createCell(19);
 			cell14.setCellStyle(cellStyle);
 			cell14.setCellValue("TDS");
 
-			SXSSFCell cell15 = header.createCell(16);
+			SXSSFCell cell15 = header.createCell(20);
 			cell15.setCellStyle(cellStyle);
 			cell15.setCellValue("NET");
 
-			SXSSFCell cell16 = header.createCell(17);
+			SXSSFCell cell16 = header.createCell(21);
 			cell16.setCellStyle(cellStyle);
 			cell16.setCellValue("GST");
 
-			SXSSFCell cell17 = header.createCell(18);
+			SXSSFCell cell17 = header.createCell(22);
 			cell17.setCellStyle(cellStyle);
 			cell17.setCellValue("Actual Amount");
 
-			SXSSFCell cell18 = header.createCell(19);
+			SXSSFCell cell18 = header.createCell(23);
 			cell18.setCellStyle(cellStyle);
 			cell18.setCellValue("Remarks");
 
@@ -1764,6 +1782,7 @@ public class RentController {
 				if (!doneList.contains(D)) {
 					// clear temp_list
 					tempL.clear();
+
 					if (data.stream().anyMatch(obj -> obj.getContractID()
 							.equalsIgnoreCase(D.getContractInfo().getPriviousContractID() + ""))) {
 
@@ -1784,23 +1803,29 @@ public class RentController {
 							row.createCell(1).setCellValue(item.getContractInfo().getAgreementActivationStatus());
 							row.createCell(2).setCellValue(item.getBranchID());
 							row.createCell(3).setCellValue(item.getContractInfo().getLesseeBranchName());
-							row.createCell(4).setCellValue(item.getContractInfo().getLessorName());
-							row.createCell(5).setCellValue(item.getContractInfo().getLessorBankName());
-							row.createCell(6).setCellValue(item.getContractInfo().getLessorIfscNumber());
-							row.createCell(7).setCellValue(item.getContractInfo().getLessorAccountNumber());
-							row.createCell(8).setCellValue(item.getContractInfo().getRentStartDate() + "");
-							row.createCell(9).setCellValue(item.getContractInfo().getRentEndDate() + "");
-							row.createCell(10).setCellValue(item.getContractInfo().getLessorRentAmount());
-							row.createCell(11).setCellValue(item.getMonthlyRent());
-							row.createCell(12).setCellValue(item.getDue());
-							row.createCell(13).setCellValue(item.getProvision());
-							row.createCell(14).setCellValue(item.getGross());
-							row.createCell(15).setCellValue(item.getTds());
-							row.createCell(16).setCellValue(item.getNet());
-							row.createCell(17).setCellValue(item.getGST());
-							SXSSFCell actualcell = row.createCell(18);
-							if (item.isRedflag()) {
-//								actualcell.setCellStyle(cellstyle);
+
+							row.createCell(4).setCellValue(item.getContractInfo().getLesseeBranchType());
+							row.createCell(5).setCellValue(item.getContractInfo().getLesseeZone());
+							row.createCell(6).setCellValue(item.getContractInfo().getLesseeDivision());
+							row.createCell(7).setCellValue(item.getContractInfo().getLesseeState());
+
+							row.createCell(8).setCellValue(item.getContractInfo().getLessorName());
+							row.createCell(9).setCellValue(item.getContractInfo().getLessorBankName());
+							row.createCell(10).setCellValue(item.getContractInfo().getLessorIfscNumber());
+							row.createCell(11).setCellValue(item.getContractInfo().getLessorAccountNumber());
+							row.createCell(12).setCellValue(item.getContractInfo().getRentStartDate() + "");
+							row.createCell(13).setCellValue(item.getContractInfo().getRentEndDate() + "");
+							row.createCell(14).setCellValue(item.getContractInfo().getLessorRentAmount());
+							row.createCell(15).setCellValue(item.getMonthlyRent());
+							row.createCell(16).setCellValue(item.getDue());
+							row.createCell(17).setCellValue(item.getProvision());
+							row.createCell(18).setCellValue(item.getGross());
+							row.createCell(19).setCellValue(item.getTds());
+							row.createCell(20).setCellValue(item.getNet());
+							row.createCell(21).setCellValue(item.getGST());
+							SXSSFCell actualcell = row.createCell(22);
+							if (!item.isRedflag()) {
+								actualcell.setCellStyle(cellstyle);
 							}
 							actualcell.setCellValue(item.getActualAmount());
 						});
@@ -1810,26 +1835,32 @@ public class RentController {
 						row.createCell(1).setCellValue(D.getContractInfo().getAgreementActivationStatus());
 						row.createCell(2).setCellValue(D.getBranchID());
 						row.createCell(3).setCellValue(D.getContractInfo().getLesseeBranchName());
-						row.createCell(4).setCellValue(D.getContractInfo().getLessorName());
-						row.createCell(5).setCellValue(D.getContractInfo().getLessorBankName());
-						row.createCell(6).setCellValue(D.getContractInfo().getLessorIfscNumber());
-						row.createCell(7).setCellValue(D.getContractInfo().getLessorAccountNumber());
-						row.createCell(8).setCellValue(linkedcontract.getContractInfo().getAgreementStartDate() + "|"
+
+						row.createCell(4).setCellValue(D.getContractInfo().getLesseeBranchType());
+						row.createCell(5).setCellValue(D.getContractInfo().getLesseeZone());
+						row.createCell(6).setCellValue(D.getContractInfo().getLesseeDivision());
+						row.createCell(7).setCellValue(D.getContractInfo().getLesseeState());
+
+						row.createCell(8).setCellValue(D.getContractInfo().getLessorName());
+						row.createCell(9).setCellValue(D.getContractInfo().getLessorBankName());
+						row.createCell(10).setCellValue(D.getContractInfo().getLessorIfscNumber());
+						row.createCell(11).setCellValue(D.getContractInfo().getLessorAccountNumber());
+						row.createCell(12).setCellValue(linkedcontract.getContractInfo().getAgreementStartDate() + "|"
 								+ D.getContractInfo().getRentStartDate());
-						row.createCell(9).setCellValue(linkedcontract.getContractInfo().getAgreementEndDate() + "|"
+						row.createCell(13).setCellValue(linkedcontract.getContractInfo().getAgreementEndDate() + "|"
 								+ D.getContractInfo().getRentEndDate());
-						row.createCell(10).setCellValue(linkedcontract.getContractInfo().getLessorRentAmount() + "|"
+						row.createCell(14).setCellValue(linkedcontract.getContractInfo().getLessorRentAmount() + "|"
 								+ D.getContractInfo().getLessorRentAmount());
-						row.createCell(11).setCellValue(linkedcontract.getMonthlyRent() + "|" + D.getMonthlyRent());
-						row.createCell(12).setCellValue(linkedcontract.getDue() + D.getDue());
-						row.createCell(13).setCellValue(linkedcontract.getProvision() + D.getProvision());
-						row.createCell(14).setCellValue(linkedcontract.getGross() + D.getGross());
-						row.createCell(15).setCellValue(linkedcontract.getTds() + D.getTds());
-						row.createCell(16).setCellValue(linkedcontract.getNet() + D.getNet());
-						row.createCell(17).setCellValue(linkedcontract.getGST() + D.getGST());
-						SXSSFCell actualcell = row.createCell(18);
-						if (linkedcontract.isRedflag() || D.isRedflag()) {
-//							actualcell.setCellStyle(cellstyle);
+						row.createCell(15).setCellValue(linkedcontract.getMonthlyRent() + "|" + D.getMonthlyRent());
+						row.createCell(16).setCellValue(linkedcontract.getDue() + D.getDue());
+						row.createCell(17).setCellValue(linkedcontract.getProvision() + D.getProvision());
+						row.createCell(18).setCellValue(linkedcontract.getGross() + D.getGross());
+						row.createCell(19).setCellValue(linkedcontract.getTds() + D.getTds());
+						row.createCell(20).setCellValue(linkedcontract.getNet() + D.getNet());
+						row.createCell(21).setCellValue(linkedcontract.getGST() + D.getGST());
+						SXSSFCell actualcell = row.createCell(22);
+						if (!linkedcontract.isRedflag() || !D.isRedflag()) {
+							actualcell.setCellStyle(cellstyle);
 						}
 						try {
 							actualcell.setCellValue(Double.parseDouble(linkedcontract.getActualAmount())
@@ -1845,23 +1876,29 @@ public class RentController {
 							row.createCell(1).setCellValue(D.getContractInfo().getAgreementActivationStatus());
 							row.createCell(2).setCellValue(D.getBranchID());
 							row.createCell(3).setCellValue(D.getContractInfo().getLesseeBranchName());
-							row.createCell(4).setCellValue(D.getContractInfo().getLessorName());
-							row.createCell(5).setCellValue(D.getContractInfo().getLessorBankName());
-							row.createCell(6).setCellValue(D.getContractInfo().getLessorIfscNumber());
-							row.createCell(7).setCellValue(D.getContractInfo().getLessorAccountNumber());
-							row.createCell(8).setCellValue(D.getContractInfo().getRentStartDate() + "");
-							row.createCell(9).setCellValue(D.getContractInfo().getRentEndDate() + "");
-							row.createCell(10).setCellValue(D.getContractInfo().getLessorRentAmount());
-							row.createCell(11).setCellValue(D.getMonthlyRent());
-							row.createCell(12).setCellValue(D.getDue());
-							row.createCell(13).setCellValue(D.getProvision());
-							row.createCell(14).setCellValue(D.getGross());
-							row.createCell(15).setCellValue(D.getTds());
-							row.createCell(16).setCellValue(D.getNet());
-							row.createCell(17).setCellValue(D.getGST());
-							SXSSFCell actualcell = row.createCell(18);
-							if (D.isRedflag()) {
-//								actualcell.setCellStyle(cellstyle);
+
+							row.createCell(4).setCellValue(D.getContractInfo().getLesseeBranchType());
+							row.createCell(5).setCellValue(D.getContractInfo().getLesseeZone());
+							row.createCell(6).setCellValue(D.getContractInfo().getLesseeDivision());
+							row.createCell(7).setCellValue(D.getContractInfo().getLesseeState());
+
+							row.createCell(8).setCellValue(D.getContractInfo().getLessorName());
+							row.createCell(9).setCellValue(D.getContractInfo().getLessorBankName());
+							row.createCell(10).setCellValue(D.getContractInfo().getLessorIfscNumber());
+							row.createCell(11).setCellValue(D.getContractInfo().getLessorAccountNumber());
+							row.createCell(12).setCellValue(D.getContractInfo().getRentStartDate() + "");
+							row.createCell(13).setCellValue(D.getContractInfo().getRentEndDate() + "");
+							row.createCell(14).setCellValue(D.getContractInfo().getLessorRentAmount());
+							row.createCell(15).setCellValue(D.getMonthlyRent());
+							row.createCell(16).setCellValue(D.getDue());
+							row.createCell(17).setCellValue(D.getProvision());
+							row.createCell(18).setCellValue(D.getGross());
+							row.createCell(19).setCellValue(D.getTds());
+							row.createCell(20).setCellValue(D.getNet());
+							row.createCell(21).setCellValue(D.getGST());
+							SXSSFCell actualcell = row.createCell(22);
+							if (!D.isRedflag()) {
+								actualcell.setCellStyle(cellstyle);
 							}
 							actualcell.setCellValue(D.getActualAmount());
 						}
