@@ -643,13 +643,19 @@ public class RentServiceImpl implements RentService {
 //			}
 			// --------------------------------------
 
-			if (Double.parseDouble(rentContract.getTds()) > 0)
-				tds = Math.round(((Double.parseDouble(rentContract.getTds()) / 100.0f) * gross));
+			String Strtds = rentContract.getTds();
+
+			if (Strtds != null) {
+				if (Double.parseDouble(rentContract.getTds()) > 0)
+					tds = Math.round(((Double.parseDouble(rentContract.getTds()) / 100.0f) * gross));
+			}
 
 			// ----------GST Value initiate-----------
-			double gstpercent = Double.parseDouble(rentContract.getGst());
+			if (rentContract.getGst() != null) {
+				double gstpercent = Double.parseDouble(rentContract.getGst());
+				Gst += Math.round(((gstpercent / 100.0f) * gross));
+			}
 
-			Gst += Math.round(((gstpercent / 100.0f) * gross));
 			// ----------Net Value initiate-----------
 			Net = gross - tds + Gst;
 			// ----------Rent Actual initiate-----------
