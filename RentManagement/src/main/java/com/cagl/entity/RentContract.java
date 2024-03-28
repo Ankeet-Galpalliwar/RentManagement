@@ -144,6 +144,19 @@ public class RentContract {
 	private String lessorTaxNumberPath;
 	private String lessorBankPassBookPath;
 	private String panDocumentPath;
+	
+	//
+	private String maker;
+	private String mTimeZone;
+	
+	private String editer;
+	private String eTimeZone;
+	
+	
+	private String Checker;
+	private String CTimeZone;
+	
+	private String contractZone;
 
 	@OneToMany(mappedBy = "contractInfo", fetch = FetchType.EAGER)
 //	@Exclude

@@ -15,4 +15,9 @@ public class CustomeExceptationHandler {
 				.body(Responce.builder().error(Boolean.TRUE).msg(ex.getMessage()).data("-NA-").build());
 	}
 
+	@ExceptionHandler(InvalidUser.class)
+	public ResponseEntity<String> InvalidUser(InvalidUser msg) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(msg.getMessage() + "..!");
+	}
+
 }

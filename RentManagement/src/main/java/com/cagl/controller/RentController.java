@@ -38,6 +38,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -64,7 +65,6 @@ import com.cagl.dto.provisionDto;
 import com.cagl.dto.varianceDto;
 import com.cagl.entity.ApiCallRecords;
 import com.cagl.entity.BranchDetail;
-import com.cagl.entity.ConfirmPaymentReport;
 import com.cagl.entity.IfscMaster;
 import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RawPaymentReport;
@@ -122,6 +122,11 @@ public class RentController {
 	@Autowired
 	JdbcTemplate jdbcTemplate;
 
+	@PostMapping("/changeZone")
+	public int ChangeContractZone(@RequestParam int contractID) {
+		return rentContractRepository.changeContractZone(contractID);
+	}
+
 	@GetMapping("/getvariance")
 	public ResponseEntity<Responce> getvariance(@RequestParam String contractID) {
 		List<varianceDto> allvariDtos = new ArrayList<>();
@@ -147,7 +152,7 @@ public class RentController {
 						.error(Boolean.FALSE).msg("ALL variance [" + contractID + "]").build());
 	}
 
-	@GetMapping("ifscinfo")
+	@GetMapping("/ifscinfo")
 	public ResponseEntity<Responce> getIfscInfo(@RequestParam String ifscNumber) {
 		Optional<IfscMaster> data = ifscMasterRepository.findById(ifscNumber);
 		if (data.isPresent())
@@ -157,7 +162,7 @@ public class RentController {
 				.body(Responce.builder().data(null).error(Boolean.TRUE).msg("IFSC Info Not Present in Master").build());
 	}
 
-	@GetMapping("getstate")
+	@GetMapping("/getstate")
 	public ResponseEntity<Responce> getState() {
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce
@@ -166,21 +171,21 @@ public class RentController {
 						.error(Boolean.FALSE).msg("Get All State").build());
 	}
 
-	@GetMapping("getdistrict")
+	@GetMapping("/getdistrict")
 	public ResponseEntity<Responce> getDistrictBaseonState(@RequestParam String state) {
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder()
 				.data(rentContractRepository.getdistrict(state).stream().distinct().collect(Collectors.toList()))
 				.error(Boolean.FALSE).msg("Get District").build());
 	}
 
-	@GetMapping("filterBranchIDs")
+	@GetMapping("/filterBranchIDs")
 	public ResponseEntity<Responce> getBranchIdsforFilter() {
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder()
 				.data(rentContractRepository.getbranchIds().stream().sorted().distinct().collect(Collectors.toList()))
 				.error(Boolean.FALSE).msg("Get All Branch IDS base on contract master..!").build());
 	}
 
-	@GetMapping("getBranchName")
+	@GetMapping("/getBranchName")
 	public ResponseEntity<Responce> getBranchNames() {
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder()
@@ -194,8 +199,9 @@ public class RentController {
 	 * @param sdrecord
 	 * @throws ParseException
 	 */
-	@PostMapping("setsd")
-	public ResponseEntity<Responce> getSd(@RequestBody SDRecoardDto sdrecord) throws ParseException {
+	@PostMapping("/setsd")
+	public ResponseEntity<Responce> getSd(Authentication authentication, @RequestBody SDRecoardDto sdrecord)
+			throws ParseException {
 		Optional<provision> optionalProvision = provisionRepository
 				.findById(sdrecord.getContractID() + "-" + sdrecord.getMonth() + "/" + sdrecord.getYear());
 		if (optionalProvision.isPresent())
@@ -205,12 +211,13 @@ public class RentController {
 		RentContract rentContract = rentContractRepository.findById(sdrecord.getContractID()).get();
 		// If month Year not match Send conflict Error in ResponSe
 		if (LocalDate.now().isAfter(rentContract.getRentEndDate())) {
-			ResponseEntity<Responce> responce = addprovison("REVERSED", // SD reversed always PAID.
+			ResponseEntity<Responce> responce = addprovison(null, "REVERSED", // SD reversed always PAID.
 					provisionDto.builder().branchID(rentContract.getBranchID()).paymentFlag("PAID")
 							.contractID(sdrecord.getContractID() + "").dateTime(LocalDate.now())
 							.month(sdrecord.getMonth()).provisionAmount(sdrecord.getSdAmount())
 							.provisiontype("REVERSED").remark("SD RETURN" + sdrecord.getRemark())
-							.year(sdrecord.getYear()).build());
+							.year(sdrecord.getYear()).makerID(authentication.getName())
+							.makerTimeZone(LocalDate.now().toString()).build());
 			if (responce.getStatusCode() == HttpStatus.CONFLICT)
 				return ResponseEntity.status(HttpStatus.OK)
 						.body(Responce.builder().data(null).error(Boolean.FALSE).msg("SD SETTLEMENT FAIL..!").build());
@@ -223,7 +230,7 @@ public class RentController {
 		}
 	}
 
-	@PostMapping("makeactual")
+	@PostMapping("/makeactual")
 	public ResponseEntity<Responce> makeActual(@RequestParam String Status,
 			@RequestBody List<MakeActualDto> ActualDto) {
 		Map<String, String> responce = rentService.makeactual(Status, ActualDto);
@@ -248,7 +255,7 @@ public class RentController {
 	 * @API -> TO make Provision or Reverse Provision
 	 */
 	@PostMapping("/setprovision")
-	public ResponseEntity<Responce> addprovison(@RequestParam String provisionType,
+	public ResponseEntity<Responce> addprovison(Authentication authentication, @RequestParam String provisionType,
 			@RequestBody provisionDto provisionDto) throws ParseException {
 
 		Optional<provision> optionalProvision = provisionRepository
@@ -257,6 +264,8 @@ public class RentController {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(optionalProvision.get())
 					.error(Boolean.TRUE).msg("provision Already Exist").build());
 
+		provisionDto.setMakerID(authentication.getName());
+		provisionDto.setMakerTimeZone(LocalDate.now().toString());
 		provisionDto pDto = rentService.addprovision(provisionType, provisionDto);
 		// ---API CALL RECORD SAVE---
 		apirecords.save(ApiCallRecords.builder().apiname("setprovision")
@@ -278,7 +287,7 @@ public class RentController {
 	}
 
 //	@Transactional
-	@DeleteMapping("deleteProvision")
+	@DeleteMapping("/deleteProvision")
 
 	public String deleteProvision(@RequestParam String contractID, @RequestParam int year, @RequestParam String month) {
 		try {
@@ -380,7 +389,7 @@ public class RentController {
 				.body(Responce.builder().data(prDto).msg("Raw Data fetched").error(Boolean.FALSE).build());
 	}
 
-	@GetMapping("getduereportUid") // Base on UniqueID
+	@GetMapping("/getduereportUid") // Base on UniqueID
 	public ResponseEntity<Responce> getDueReport(@RequestParam String value) {
 		List<RentDue> getrentdue = dueRepository.getrentdue(value);
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(getrentdue.stream().map(e -> {
@@ -396,7 +405,7 @@ public class RentController {
 		})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
 
-	@GetMapping("getduereportBid") // Base on BranchID
+	@GetMapping("/getduereportBid") // Base on BranchID
 	public ResponseEntity<Responce> getDueReport1(@RequestParam String value) {
 		List<RentDue> getrentdue = dueRepository.getrentdue1(value);
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(getrentdue.stream().map(e -> {
@@ -411,7 +420,7 @@ public class RentController {
 		})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
 
-	@GetMapping("getbranchids")
+	@GetMapping("/getbranchids")
 	public List<String> getBranchIDs(@RequestParam String type) {
 		if (type.toUpperCase().startsWith("RF")) {
 			return rentContractRepository.getbranchIDs("RF").stream().distinct().collect(Collectors.toList());
@@ -422,7 +431,7 @@ public class RentController {
 		}
 	}
 
-	@GetMapping("getbranchdetails")
+	@GetMapping("/getbranchdetails")
 	public ResponseEntity<Responce> getBranchDetails(@RequestParam String BranchID) {
 
 		Optional<RfBranchMaster> rfdata = rfBrachRepository.findById(BranchID);
@@ -449,7 +458,7 @@ public class RentController {
 		}
 	}
 
-	@GetMapping("renewalDetails")
+	@GetMapping("/renewalDetails")
 	public ResponseEntity<Responce> getinfo(@RequestParam String BranchID) {
 
 		List<RentContract> contractData = rentContractRepository.findByBranchID(BranchID);
@@ -482,7 +491,8 @@ public class RentController {
 	}
 
 	@PostMapping("/insertcontract")
-	public ResponseEntity<Responce> insertRentContract(@RequestBody RentContractDto rentContractDto) {
+	public ResponseEntity<Responce> insertRentContract(Authentication authentication,
+			@RequestBody RentContractDto rentContractDto) {
 		List<Object> responceData = new ArrayList<>();
 		rentContractDto.getRecipiants().stream().forEach(data -> {
 			RentContract rentContract = new RentContract();
@@ -493,6 +503,9 @@ public class RentController {
 			else
 				rentContract.setUniqueID((ids.get(ids.size() - 1) + 1)); // Input value type is Integer.
 
+			rentContract.setMaker(authentication.getName());
+			rentContract.setMTimeZone(LocalDate.now().toString());
+			rentContract.setContractZone("PENDING");
 			rentContract.setLessorRecipiantsName(data.getLessorRecipiantsName());
 			rentContract.setLessorBankName(data.getLessorBankName());
 			rentContract.setLessorBranchName(data.getLessorBranchName());
@@ -539,7 +552,7 @@ public class RentController {
 	 * @return
 	 */
 	@PutMapping("/editcontracts")
-	public ResponseEntity<Responce> editContracts(@RequestParam int uniqueID,
+	public ResponseEntity<Responce> editContracts(Authentication authentication, @RequestParam int uniqueID,
 			@RequestBody RentContractDto contractDto) {
 		RentContract rentContract = rentContractRepository.findById(uniqueID).get();
 		boolean flagCheck = false; // its false don't calculate Due..!
@@ -559,6 +572,8 @@ public class RentController {
 		}
 		BeanUtils.copyProperties(contractDto, rentContract);
 		rentContract.setUniqueID(uniqueID);
+		rentContract.setEditer(authentication.getName());
+		rentContract.setETimeZone(LocalDate.now().toString());
 		RentContract save = rentContractRepository.save(rentContract);
 		if (save != null & flagCheck) {
 			// ---API CALL RECORD SAVE---
@@ -700,7 +715,7 @@ public class RentController {
 	 * @Api is only use for BackEnd Bulk Remaining RentDue Calculation Purpose..!
 	 * @only one Time Used While After DataDump Process
 	 */
-//	@GetMapping("makeDue")
+	@GetMapping("/makeDue")
 	public Boolean generateRentDue() {
 		// Get all pending Due Calculation ContractIDs
 		List<RentContract> allcontract = rentContractRepository.getduemakerIDs();

@@ -28,5 +28,8 @@ public class provisionDto {
 	private  boolean deleteFlag;
 	//In reversed_provision->Middle payment Done or not
 	private String paymentFlag;
+	
+	private String makerID;
+	private String makerTimeZone;
 
 }

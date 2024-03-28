@@ -34,6 +34,9 @@ public class provision {
 	private LocalDate flag;
 	private String paymentFlag;
 	
+	private String makerID;
+	private String makerTimeZone;
+	
 	
 
 }

@@ -145,6 +145,20 @@ public class RentContractDto {
 	private String lessorTaxNumberPath;
 	private String lessorBankPassBookPath;
 	private String panDocumentPath;
+	
+	
+	//
+	private String maker;
+	private String mTimeZone;
+	
+	private String editer;
+	private String eTimeZone;
+	
+	
+	private String Checker;
+	private String CTimeZone;
+	
+	private String contractZone;
 
 //	@OneToMany( mappedBy = "rentContractRecipiant")
 	private List<RecipiantDto> recipiants;
