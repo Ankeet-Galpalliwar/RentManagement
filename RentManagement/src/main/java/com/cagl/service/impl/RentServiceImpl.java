@@ -645,7 +645,7 @@ public class RentServiceImpl implements RentService {
 
 			String Strtds = rentContract.getTds();
 
-			if (Strtds != null) {
+			if (Strtds != null) {//
 				if (Double.parseDouble(rentContract.getTds()) > 0)
 					tds = Math.round(((Double.parseDouble(rentContract.getTds()) / 100.0f) * gross));
 			}
