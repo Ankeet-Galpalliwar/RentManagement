@@ -44,7 +44,6 @@ public class AuthController {
 
 	@Autowired
 	UserRepository userRepository;
-	
 
 	@PostMapping("/login")
 	public ResponseEntity<JwtAuthResponse> creatToken(@RequestBody JwtAuthRequest authRequest) throws Exception {
@@ -52,18 +51,20 @@ public class AuthController {
 
 		UserDetails userDetails = userDetailsService.loadUserByUsername(authRequest.getUserName());
 		if (userDetails != null) {
-			//System.out.println("=============Token Generated===============");
-			String token = this.jwtTokenHelper.generateToken(userDetails);
-			JwtAuthResponse authResponse = new JwtAuthResponse();
-			authResponse.setToken(token);
-			authResponse.setUserName(userDetails.getUsername());
+			// System.out.println("=============Token Generated===============");
+			JwtAuthResponse authResponse = null;
 			try {
+				String token = this.jwtTokenHelper.generateToken(userDetails);
+				authResponse = new JwtAuthResponse();
+				authResponse.setToken(token);
+				authResponse.setUserName(userDetails.getUsername());
+
 				User user = userRepository.findById(userDetails.getUsername()).get();
 				authResponse.setUserrole(user.getRoles());
 				if (!user.getStatus().equalsIgnoreCase("ACTIVE")) {
 					throw new InvalidUser();
 				}
-				
+
 			} catch (Exception e) {
 				throw new InvalidUser();
 			}
@@ -87,11 +88,11 @@ public class AuthController {
 			throw new InvalidUser();
 		}
 	}
-	
-	//=======External purpose=============
+
+	// =======External purpose=============
 	@GetMapping("generatepassword")
-	public String passwordCreate(@RequestParam String password){
-		return encoder.encode(password);	
+	public String passwordCreate(@RequestParam String password) {
+		return encoder.encode(password);
 	}
 
 }

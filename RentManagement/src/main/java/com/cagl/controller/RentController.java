@@ -592,8 +592,17 @@ public class RentController {
 	}
 
 	/**
+	 * @ Pending Contract API (Checker Screen)
+	 */
+	@GetMapping("/getpendingcontract")
+	public ResponseEntity<Responce> getPendingContract() {
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().data(rentContractRepository.findByContractZone("PENDING")).error(Boolean.FALSE)
+						.msg("Pending Contract").build());
+	}
+
+	/**
 	 * Get contract Details Base on BranchID.->List
-	 * 
 	 * @param branchID
 	 * @return list of Contract
 	 */
