@@ -50,7 +50,10 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 //	@Query(value = "SELECT uniqueid FROM rent_contract where agreement_activation_status ='Open' and rent_start_date<=:flagDate and rent_end_date>=:flagDate", nativeQuery = true)
 //	void getBranchNames();
 
-	@Query(value = "update rent_contract set contract_zone='APPROVED' where uniqueid=:contractID", nativeQuery = true)
-	int changeContractZone(@Param("contractID") int ContractID);
+	/*
+	 * @ Error->{Due to incorrect ResultSet}
+	 */
+//	@Query(value = "update rent_contract set contract_zone='APPROVED' where uniqueid=:contractID", nativeQuery = true)
+//	int changeContractZone(@Param("contractID") int ContractID);
 
 }

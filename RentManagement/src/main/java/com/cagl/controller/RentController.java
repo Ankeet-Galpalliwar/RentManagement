@@ -122,9 +122,10 @@ public class RentController {
 	@Autowired
 	JdbcTemplate jdbcTemplate;
 
-	@PostMapping("/changeZone")
+	@GetMapping("/changeZone")
 	public int ChangeContractZone(@RequestParam int contractID) {
-		return rentContractRepository.changeContractZone(contractID);
+		return jdbcTemplate
+				.update("update rent_contract set contract_zone='APPROVED' where uniqueid=" + contractID + ";");
 	}
 
 	@GetMapping("/getvariance")
@@ -597,12 +598,18 @@ public class RentController {
 	@GetMapping("/getpendingcontract")
 	public ResponseEntity<Responce> getPendingContract() {
 		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(rentContractRepository.findByContractZone("PENDING")).error(Boolean.FALSE)
+				.body(Responce.builder().data(rentContractRepository.findByContractZone("PENDING").stream().map(e -> {
+					RentContractDto Dto = new RentContractDto();
+					BeanUtils.copyProperties(e, Dto);
+					return Dto;
+				}).collect(Collectors.toList())).error(Boolean.FALSE)
+
 						.msg("Pending Contract").build());
 	}
 
 	/**
 	 * Get contract Details Base on BranchID.->List
+	 * 
 	 * @param branchID
 	 * @return list of Contract
 	 */
