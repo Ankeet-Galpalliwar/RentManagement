@@ -67,8 +67,8 @@ public class RentContract {
 	private String lesseeZone;
 	private String lesseeState;
 	private String lesseeBranchType;
-	private String lesseeApproverrenewals;
-	private String lesseeApproverRelocation;
+	private LocalDate rentDueDate;
+	private String buildingFloor;
 	private String lesseeEntityDetails;
 
 	private String premesisLocation;
@@ -92,7 +92,7 @@ public class RentContract {
 	private String schedulePrimesis; // Field is use As a EscalatedMonth for Rent_Due Calculation
 	private String glName;
 	private String glEmpId;
-	private String signedDate;
+	private LocalDate signedDate;
 	private String northPremesis;
 	private String southPremesis;
 	private String eastPremesis;
@@ -144,18 +144,17 @@ public class RentContract {
 	private String lessorTaxNumberPath;
 	private String lessorBankPassBookPath;
 	private String panDocumentPath;
-	
+
 	//
 	private String maker;
 	private String mTimeZone;
-	
+
 	private String editer;
 	private String eTimeZone;
-	
-	
+
 	private String Checker;
 	private String CTimeZone;
-	
+
 	private String contractZone;
 
 	@OneToMany(mappedBy = "contractInfo", fetch = FetchType.EAGER)

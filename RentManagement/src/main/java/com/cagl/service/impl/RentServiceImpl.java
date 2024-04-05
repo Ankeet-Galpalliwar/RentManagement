@@ -557,6 +557,11 @@ public class RentServiceImpl implements RentService {
 	 */
 	public PaymentReportDto generatePaymentreport(String contractID, String month, String year, String reportType) {
 
+//		System.out.println(contractID);
+//		System.out.println(month);
+//		System.out.println(year);
+//		System.out.println(reportType);
+
 		// check particular contract is applicable or not for payment report-> To avoid
 		// go inside...!
 		double MonthRent = 0.0;
@@ -586,6 +591,8 @@ public class RentServiceImpl implements RentService {
 			rentContract = rentContractRepository.findById(Integer.parseInt(contractID)).get();
 			BeanUtils.copyProperties(rentContract, info);
 
+//			System.out.println(rentContract);
+
 			// -------Calculate DUE-----------------
 			LocalDate flagDate = RentController.getFlagDate(month, Integer.parseInt(year), "start");
 			String overallprovisioin = provisionRepository.getoverallprovisioin(contractID, flagDate + "");
@@ -600,6 +607,9 @@ public class RentServiceImpl implements RentService {
 				// overall active base on date provision sum ...!
 				provision += Double.parseDouble(overallprovisioin);
 			}
+
+//			System.out.println("============1");
+
 			DueValue += MonthRent;
 			// ----------initiate Variance on DueValue---------
 
@@ -616,6 +626,7 @@ public class RentServiceImpl implements RentService {
 					DueValue += Double.parseDouble(overAllVariance);
 				}
 			}
+//			System.out.println("============2");
 
 			// ----------Gross Value initiate---------
 			gross = DueValue - provision;
@@ -643,18 +654,24 @@ public class RentServiceImpl implements RentService {
 //			}
 			// --------------------------------------
 
-			String Strtds = rentContract.getTds();
+//			System.out.println("============3");
 
-			if (Strtds != null) {
+			try {
 				if (Double.parseDouble(rentContract.getTds()) > 0)
 					tds = Math.round(((Double.parseDouble(rentContract.getTds()) / 100.0f) * gross));
+			} catch (Exception e) {
+				System.out.println("TDS ERROR");
 			}
 
 			// ----------GST Value initiate-----------
-			if (rentContract.getGst() != null) {
+			try {
 				double gstpercent = Double.parseDouble(rentContract.getGst());
 				Gst += Math.round(((gstpercent / 100.0f) * gross));
+			} catch (Exception e) {
+				System.out.println("GST ERROR..!");
 			}
+
+//			System.out.println("============4");
 
 			// ----------Net Value initiate-----------
 			Net = gross - tds + Gst;
@@ -671,7 +688,7 @@ public class RentServiceImpl implements RentService {
 			} else
 				ActualAmount = "--";
 
-			System.out.println(ActualAmount);
+//			System.out.println(ActualAmount);
 		} catch (Exception e) {
 			throw new com.cagl.customexceptation.PaymentReport("Can't Generate Payment Report..!");
 		}

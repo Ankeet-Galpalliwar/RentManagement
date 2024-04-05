@@ -56,8 +56,8 @@ public class RentContractDto {
 	private String lesseeZone;
 	private String lesseeState;
 	private String lesseeBranchType;
-	private String lesseeApproverrenewals;
-	private String lesseeApproverRelocation;
+	private LocalDate rentDueDate;
+	private String buildingFloor;
 	private String lesseeEntityDetails;
 
 	private String premesisLocation;
@@ -78,10 +78,10 @@ public class RentContractDto {
 //	private String premesisZone;
 //	private String premesisState;
 	private String premesisBuildingType;
-	private String schedulePrimesis;// Field is use As a EscalatedMonth for Rent_Due Calculation
+	private String schedulePrimesis; // Field is use As a EscalatedMonth for Rent_Due Calculation
 	private String glName;
 	private String glEmpId;
-	private String signedDate;
+	private LocalDate signedDate;
 	private String northPremesis;
 	private String southPremesis;
 	private String eastPremesis;
@@ -94,10 +94,6 @@ public class RentContractDto {
 	private LocalDate agreementEndDate;
 	private LocalDate rentStartDate;
 	private LocalDate rentEndDate;
-//	private LocalDate firstRentDate;
-//	private LocalDate lastRentDate;
-//	private LocalDate agreementRefreshStartDate;
-//	private LocalDate agreementRefreshEndDate;
 	private String maintaineneCharge;
 	private String waterCharge;
 	private String electricity;
@@ -106,14 +102,11 @@ public class RentContractDto {
 
 	private int securityDepositAmount;
 	private LocalDate securityDepositPaymentDate;
-//	private String securityDepositPaymentMode;
 	private String securityDepositUtr;
 	private String securityDepositLockinPeriod;
 	private String securityDepositnoticePeriod;
 	private String securityDepositExitTerm;
 	private int standardDeducition;
-//	private int firstMonthvalue;
-//	private int lastMonthvalue;
 
 	// Recipiants Details
 	private String lessorRecipiantsName;
@@ -125,39 +118,32 @@ public class RentContractDto {
 	private String gstNo;
 	private double lessorRentAmount;
 
-//	private String rentAmount;
 	private String escalation;
 	private String tds;
 	private String gst;
-//	private String renewalTenure;
 
 	private String lattitude;
 	private String longitude;
 	private String gpsCoordinates;
 
 	private double monthlyRent;
-//	private int remainingDays;
-//	private String renewalStatus;
-//	private String rentContractStatus;
 
 	// document path
 	private String lessorElectricityBillPath;
 	private String lessorTaxNumberPath;
 	private String lessorBankPassBookPath;
 	private String panDocumentPath;
-	
-	
+
 	//
 	private String maker;
 	private String mTimeZone;
-	
+
 	private String editer;
 	private String eTimeZone;
-	
-	
+
 	private String Checker;
 	private String CTimeZone;
-	
+
 	private String contractZone;
 
 //	@OneToMany( mappedBy = "rentContractRecipiant")

@@ -618,11 +618,12 @@ public class RentController {
 		List<RentContractDto> contractInfos = new ArrayList<>();
 		List<RentContract> allContractDetalis = rentContractRepository.findByBranchID(branchID);
 		if (!allContractDetalis.isEmpty()) {
-			allContractDetalis.stream().forEach(contractInfo -> {
-				RentContractDto contractDto = new RentContractDto();
-				BeanUtils.copyProperties(contractInfo, contractDto);
-				contractInfos.add(contractDto);
-			});
+			allContractDetalis.stream().filter(data -> !data.getContractZone().equalsIgnoreCase("PENDING"))
+					.forEach(contractInfo -> {
+						RentContractDto contractDto = new RentContractDto();
+						BeanUtils.copyProperties(contractInfo, contractDto);
+						contractInfos.add(contractDto);
+					});
 			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
 					.msg("All Contracts Details fetch..!").data(contractInfos.stream()
 							.sorted(Comparator.comparing(RentContractDto::getUniqueID)).collect(Collectors.toList()))
@@ -662,7 +663,7 @@ public class RentController {
 		List<RentContractDto> contractInfos = new ArrayList<>();
 		List<RentContract> allContractDetalis = rentContractRepository.findAll();
 		if (!allContractDetalis.isEmpty()) {
-			allContractDetalis.stream()
+			allContractDetalis.stream().filter(data -> !data.getContractZone().equalsIgnoreCase("PENDING"))
 					.filter(data -> data.getLesseeBranchName().trim().equalsIgnoreCase(branchName.trim()))
 					.forEach(contractInfo -> {
 
@@ -690,7 +691,7 @@ public class RentController {
 		List<RentContractDto> contractInfos = new ArrayList<>();
 		List<RentContract> allContractDetalis = rentContractRepository.findAll();
 		if (!allContractDetalis.isEmpty()) {
-			allContractDetalis.stream()
+			allContractDetalis.stream().filter(data -> !data.getContractZone().equalsIgnoreCase("PENDING"))
 					.filter(data -> data.getPremesisDistrict().trim().equalsIgnoreCase(district.trim()))
 					.forEach(contractInfo -> {
 

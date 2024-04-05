@@ -22,41 +22,42 @@ import com.cagl.Security.JwtAutheticationFilter;
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
-	
+
 	@Autowired
 	JwtAuthenticationEntryPoint authenticationEntryPoint;
-	
+
 	@Autowired
 	JwtAutheticationFilter autheticationFilter;
-	
+
 	@Autowired
 	CustomeUserDetailService customeUserDetailService;
 
-
-
 	// Checker APIs
-	public static final String[] checkerApis = {"/changeZone","/getpendingcontract"};
+	public static final String[] checkerApis = { "/changeZone", "/getpendingcontract", "/makeDue",
+			"/ModifyPaymentReport" };
 	// Maker APIs
-	public static final String[] makersApis = {"/ModifyPaymentReport","/makeDue","/setsd","/makeactual","/setprovision","/deleteProvision","/BulkProvisionDelete","/insertcontract"};
+	public static final String[] makersApis = { "/setsd", "/makeactual", "/setprovision", "/deleteProvision",
+			"/BulkProvisionDelete", "/insertcontract" };
 	// Checker-maker APIs
-	public static final String[] CMApis = {"/getvariance","/ifscinfo","/getstate","/getdistrict","/filterBranchIDs",
-			"/getBranchName","/getprovision","/getenure","/generatePaymentReport","/generateRawPaymentReport","/getduereportUid","/getduereportBid",
-			"/getbranchids","/getbranchdetails","/renewalDetails","/getcontracts","/getcontractsCID","/getcotractBranchName","/getallcontracts","/editcontracts"};
+	public static final String[] CMApis = { "/getvariance", "/ifscinfo", "/getstate", "/getdistrict",
+			"/filterBranchIDs", "/getBranchName", "/getprovision", "/getenure", "/generatePaymentReport",
+			"/generateRawPaymentReport", "/getduereportUid", "/getduereportBid", "/getbranchids", "/getbranchdetails",
+			"/renewalDetails", "/getcontracts", "/getcontractsCID", "/getcotractBranchName", "/getallcontracts",
+			"/editcontracts" };
 	// PermitAll APi Login APi..
-	public static final String[] permitAllAPIs = {"/DownloadPaymentReport","/login"};
-	
+	public static final String[] permitAllAPIs = { "/DownloadPaymentReport", "/login" };
 
 	@Override
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
 
-	  auth.userDetailsService(this.customeUserDetailService).passwordEncoder(passwordEncoder());
+		auth.userDetailsService(this.customeUserDetailService).passwordEncoder(passwordEncoder());
 	}
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
 	}
-	
+
 	@Bean
 	@Override
 	public AuthenticationManager authenticationManagerBean() throws Exception {
@@ -68,13 +69,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	protected void configure(HttpSecurity http) throws Exception {
 		// TODO Auto-generated method stub
 		http.cors().and().csrf().disable().authorizeHttpRequests().antMatchers(permitAllAPIs).permitAll()
-		.antMatchers(CMApis).hasRole("CM").antMatchers(makersApis).hasRole("MAKER").antMatchers(checkerApis)
-		.hasRole("CHECKER").anyRequest().authenticated().and().exceptionHandling()
-		.authenticationEntryPoint(authenticationEntryPoint).and().sessionManagement()
-		.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-http.addFilterBefore(this.autheticationFilter, UsernamePasswordAuthenticationFilter.class);
+				.antMatchers(CMApis).hasRole("CM").antMatchers(makersApis).hasRole("MAKER").antMatchers(checkerApis)
+				.hasRole("CHECKER").anyRequest().authenticated().and().exceptionHandling()
+				.authenticationEntryPoint(authenticationEntryPoint).and().sessionManagement()
+				.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+		http.addFilterBefore(this.autheticationFilter, UsernamePasswordAuthenticationFilter.class);
 
-		
 	}
 
 }
