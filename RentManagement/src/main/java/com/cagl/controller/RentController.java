@@ -573,6 +573,7 @@ public class RentController {
 		}
 		BeanUtils.copyProperties(contractDto, rentContract);
 		rentContract.setUniqueID(uniqueID);
+		rentContract.setContractZone("PENDING");
 		rentContract.setEditer(authentication.getName());
 		rentContract.setETimeZone(LocalDate.now().toString());
 		RentContract save = rentContractRepository.save(rentContract);
