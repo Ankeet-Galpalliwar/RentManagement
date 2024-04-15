@@ -658,17 +658,17 @@ public class RentServiceImpl implements RentService {
 
 			try {
 				if (Double.parseDouble(rentContract.getTds()) > 0)
-					tds = Math.round(((Double.parseDouble(rentContract.getTds()) / 100.0f) * gross));
+					tds = Math.round(((Double.parseDouble(rentContract.getTds().trim()) / 100.0f) * gross));
 			} catch (Exception e) {
-				System.out.println("TDS ERROR");
+//				System.out.println("TDS ERROR");
 			}
 
 			// ----------GST Value initiate-----------
 			try {
-				double gstpercent = Double.parseDouble(rentContract.getGst());
+				double gstpercent = Double.parseDouble(rentContract.getGst().trim());
 				Gst += Math.round(((gstpercent / 100.0f) * gross));
 			} catch (Exception e) {
-				System.out.println("GST ERROR..!");
+//				System.out.println("GST ERROR..!");
 			}
 
 //			System.out.println("============4");
@@ -690,7 +690,7 @@ public class RentServiceImpl implements RentService {
 
 //			System.out.println(ActualAmount);
 		} catch (Exception e) {
-			throw new com.cagl.customexceptation.PaymentReport("Can't Generate Payment Report..!");
+			throw new com.cagl.customexceptation.PaymentReport("Can't Generate Payment Report..! ->"+e.getMessage());
 		}
 		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthRent(MonthRent).net(Net + "")
 				.provision(provision + "").reporttds(tds + "").sdAmount(sdAmount).actualAmount(ActualAmount)

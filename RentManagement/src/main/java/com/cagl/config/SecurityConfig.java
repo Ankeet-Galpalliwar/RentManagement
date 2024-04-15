@@ -34,7 +34,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 	// Checker APIs
 	public static final String[] checkerApis = { "/changeZone", "/getpendingcontract", "/makeDue",
-			"/ModifyPaymentReport" };
+			"/ModifyPaymentReport","/transferContract"};
 	// Maker APIs
 	public static final String[] makersApis = { "/setsd", "/makeactual", "/setprovision", "/deleteProvision",
 			"/BulkProvisionDelete", "/insertcontract" };
