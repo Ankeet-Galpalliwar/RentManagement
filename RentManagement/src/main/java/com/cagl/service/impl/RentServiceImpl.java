@@ -382,7 +382,7 @@ public class RentServiceImpl implements RentService {
 			boolean flag = true;
 			try {
 				if (Double.parseDouble(rawgeneratereport.getActualAmount()) != rawgeneratereport.getGross()) {
-					flag = false;
+					flag = false;	
 				}
 			} catch (Exception e2) {
 				// TODO: handle exception

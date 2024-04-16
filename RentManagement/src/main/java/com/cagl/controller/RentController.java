@@ -613,7 +613,6 @@ public class RentController {
 								.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
 								.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
 			}
-
 		});
 		return ResponseEntity.status(HttpStatus.OK).body(
 				Responce.builder().data(responceData).msg("Data Added Sucessfully...!").error(Boolean.FALSE).build());
@@ -873,7 +872,7 @@ public class RentController {
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
-				System.out.println(cID+"-&->");
+//				System.out.println(cID+"-&->");
 				generatePaymentReport(cID, month, year, "make");
 			});
 
