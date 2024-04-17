@@ -43,7 +43,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			"/filterBranchIDs", "/getBranchName", "/getprovision", "/getenure", "/generatePaymentReport",
 			"/generateRawPaymentReport", "/getduereportUid", "/getduereportBid", "/getbranchids", "/getbranchdetails",
 			"/renewalDetails", "/getcontracts", "/getcontractsCID", "/getcotractBranchName", "/getallcontracts",
-			"/editcontracts" };
+			"/editcontracts","/closecontract" };
 	// PermitAll APi Login APi..
 	public static final String[] permitAllAPIs = { "/DownloadPaymentReport", "/login" };
 

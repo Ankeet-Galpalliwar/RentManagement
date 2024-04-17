@@ -194,6 +194,17 @@ public class RentController {
 
 	}
 
+	@GetMapping("/closecontract")
+	public int ChangeContractStatus(@RequestParam String contractId) {
+		return jdbcTemplate.update(
+				"update rent_contract set agreement_activation_status='Closed' where uniqueid=" + contractId + ";");
+	}
+
+	/**
+	 * @APi use to approved pending contracts
+	 * @param contractID
+	 * @return
+	 */
 	@GetMapping("/changeZone")
 	public int ChangeContractZone(@RequestParam int contractID) {
 		return jdbcTemplate
