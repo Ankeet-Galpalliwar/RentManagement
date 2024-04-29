@@ -34,7 +34,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 	// Checker APIs
 	public static final String[] checkerApis = { "/changeZone", "/getpendingcontract", "/makeDue",
-			"/ModifyPaymentReport","/transferContract"};
+			"/transferContract"};
 	// Maker APIs
 	public static final String[] makersApis = { "/setsd", "/makeactual", "/setprovision", "/deleteProvision",
 			"/BulkProvisionDelete", "/insertcontract" };
@@ -45,7 +45,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			"/renewalDetails", "/getcontracts", "/getcontractsCID", "/getcotractBranchName", "/getallcontracts",
 			"/editcontracts","/closecontract" };
 	// PermitAll APi Login APi..
-	public static final String[] permitAllAPIs = { "/DownloadPaymentReport", "/login" };
+	public static final String[] permitAllAPIs = { "/DownloadPaymentReport", "/login","/checkPcontract","/ModifyPaymentReport"};
 
 	@Override
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {

@@ -27,6 +27,13 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	List<String> getdistrict(@Param("state") String state);
 
 	List<RentContract> findByBranchID(String branchID);
+	
+	/**
+	 * @API use to avoid Duplicate in p_Contrct_ID
+	 * @param ID
+	 * @return
+	 */
+	List<RentContract>  findByPriviousContractID(int ID);
 
 	/**
 	 * @ for Pending COntract(Checker Screen)

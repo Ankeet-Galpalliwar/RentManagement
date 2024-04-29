@@ -33,6 +33,7 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -47,6 +48,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -182,28 +184,55 @@ public class RentController {
 				} else {
 					map.put(save.getUniqueID() + "", "Not save");
 				}
-
 			} else {
 				map.put(e.getUniqueID() + "", "Already Exist");
-
 			}
-
 		});
-
 		return map;
-
 	}
 
+	/**
+	 * @API use to Check Duplicate P_Contract IDs.
+	 * @param pContractID
+	 */
+	@GetMapping("/checkPcontract")
+	public Boolean checkEligiable(@RequestParam int pContractID) {
+		return !rentContractRepository.findByPriviousContractID(pContractID).stream().map(e -> e.getPriviousContractID())
+				.anyMatch(id -> id == pContractID);
+
+	}
+	
+//	public ResponseEntity<Responce> getDealers(){
+//		return ResponseEntity<Responce>
+//	}
+
+	/**
+	 * @API used For Change Contract_activation_Status Open to closed.
+	 * @param contractId
+	 */
 	@GetMapping("/closecontract")
-	public int ChangeContractStatus(@RequestParam String contractId) {
+	public int ChangeContractStatus(Authentication user, @RequestParam String contractId) {
+
+		apirecords.save(ApiCallRecords.builder().apiname("closecontract")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(contractId + "-" + user.getName()).build());
+
 		return jdbcTemplate.update(
 				"update rent_contract set agreement_activation_status='Closed' where uniqueid=" + contractId + ";");
+	}
+
+	@PostMapping("changestatus")
+	public ResponseEntity<Responce> changeContract(Authentication user, @RequestParam String branchID) {
+		apirecords.save(ApiCallRecords.builder().apiname("closecontract")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(branchID + "-" + user.getName()).build());
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().build());
+
 	}
 
 	/**
 	 * @APi use to approved pending contracts
 	 * @param contractID
-	 * @return
 	 */
 	@GetMapping("/changeZone")
 	public int ChangeContractZone(@RequestParam int contractID) {
@@ -287,21 +316,19 @@ public class RentController {
 	public ResponseEntity<Responce> getSd(Authentication authentication, @RequestBody SDRecoardDto sdrecord)
 			throws ParseException {
 		Optional<provision> optionalProvision = provisionRepository
-				.findById(sdrecord.getContractID() + "-" + sdrecord.getMonth() + "/" + sdrecord.getYear());
+				.findById(sdrecord.getContractID() + "-" + sdrecord.getMonth() + "-" + sdrecord.getYear());
 		if (optionalProvision.isPresent())
 			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(optionalProvision.get())
 					.error(Boolean.TRUE).msg(" Cant't make SD provision Already Exist").build());
-
 		RentContract rentContract = rentContractRepository.findById(sdrecord.getContractID()).get();
 		// If month Year not match Send conflict Error in ResponSe
 		if (LocalDate.now().isAfter(rentContract.getRentEndDate())) {
-			ResponseEntity<Responce> responce = addprovison(null, "REVERSED", // SD reversed always PAID.
+			ResponseEntity<Responce> responce = addprovison(authentication, "REVERSED", // SD reversed always PAID.
 					provisionDto.builder().branchID(rentContract.getBranchID()).paymentFlag("PAID")
 							.contractID(sdrecord.getContractID() + "").dateTime(LocalDate.now())
 							.month(sdrecord.getMonth()).provisionAmount(sdrecord.getSdAmount())
 							.provisiontype("REVERSED").remark("SD RETURN" + sdrecord.getRemark())
-							.year(sdrecord.getYear()).makerID(authentication.getName())
-							.makerTimeZone(LocalDate.now().toString()).build());
+							.year(sdrecord.getYear()).build());
 			if (responce.getStatusCode() == HttpStatus.CONFLICT)
 				return ResponseEntity.status(HttpStatus.OK)
 						.body(Responce.builder().data(null).error(Boolean.FALSE).msg("SD SETTLEMENT FAIL..!").build());
@@ -343,7 +370,7 @@ public class RentController {
 			@RequestBody provisionDto provisionDto) throws ParseException {
 
 		Optional<provision> optionalProvision = provisionRepository
-				.findById(provisionDto.getContractID() + "-" + provisionDto.getMonth() + "/" + provisionDto.getYear());
+				.findById(provisionDto.getContractID() + "-" + provisionDto.getMonth() + "-" + provisionDto.getYear());
 		if (optionalProvision.isPresent())
 			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(optionalProvision.get())
 					.error(Boolean.TRUE).msg("provision Already Exist").build());
@@ -354,7 +381,7 @@ public class RentController {
 		// ---API CALL RECORD SAVE---
 		apirecords.save(ApiCallRecords.builder().apiname("setprovision")
 				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-				.msg(pDto.toString()).build());
+				.msg(provisionDto.getContractID() + "/" + provisionDto.getProvisionAmount()).build());
 
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(pDto).error(Boolean.FALSE).msg("provision Added").build());
@@ -883,7 +910,7 @@ public class RentController {
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
-//				System.out.println(cID+"-&->");
+				System.out.println(cID + "-&->");
 				generatePaymentReport(cID, month, year, "make");
 			});
 
