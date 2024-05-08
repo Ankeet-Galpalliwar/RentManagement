@@ -143,44 +143,50 @@ public class RentController {
 		List<StroageRentContract> collect = stroagecontactRepo.findAll().stream()
 				.sorted(Comparator.comparing(StroageRentContract::getUniqueID)).collect(Collectors.toList());
 		collect.stream().forEach(e -> {
-//			System.out.println(e);
-//			map.put(e.getUniqueID()+"","");
+			map.put(e.getUniqueID() + "", "");
 			Optional<RentContract> findById = rentContractRepository.findById(e.getUniqueID());
 			if (!findById.isPresent()) {
 				RentContract newContract = new RentContract();
 				BeanUtils.copyProperties(e, newContract);
-				RentContract Data = rentContractRepository.findByBranchID(e.getBranchID()).get(0);
-				// ...
-				newContract.setPremesisDoorNumber(Data.getPremesisDoorNumber());
-				newContract.setPremesisFloorNumber(Data.getPremesisFloorNumber());
-				newContract.setPremesisLandMark(Data.getPremesisLandMark());
-				newContract.setPremesisStreet(Data.getPremesisStreet());
-				newContract.setPremesisWardNo(Data.getPremesisWardNo());
-				newContract.setPremesisCity(Data.getPremesisCity());
-				newContract.setPremesisPinCode(Data.getPremesisPinCode());
-				newContract.setPremesisTaluka(Data.getPremesisTaluka());
-				newContract.setPremesisDistrict(Data.getPremesisDistrict());
-				newContract.setJoinaddress_Premesis(Data.getJoinaddress_Premesis());
-				newContract.setPlotNumber(Data.getPlotNumber());
-				newContract.setBuiltupArea(Data.getBuiltupArea());
-				newContract.setLattitude(Data.getLattitude());
-				newContract.setLongitude(Data.getLongitude());
-				newContract.setGpsCoordinates(Data.getGpsCoordinates());
-				newContract.setLessorPanNumber(Data.getLessorPanNumber());
-				newContract.setLessorGstNumber(Data.getLessorGstNumber());
-				newContract.setJoinaddress_Vendor(Data.getJoinaddress_Vendor());
-				newContract.setGstNo(Data.getGstNo());
-				newContract.setPanNo(Data.getPanNo());
+//				RentContract Data = rentContractRepository.findByBranchID(e.getBranchID()).get(0);
+				List<RentContract> findByBranchID = rentContractRepository.findByBranchID(e.getBranchID());
+				if (findByBranchID.size() > 0) {
+					RentContract Data = findByBranchID.get(0);
+					newContract.setPremesisDoorNumber(Data.getPremesisDoorNumber());
+					newContract.setPremesisFloorNumber(Data.getPremesisFloorNumber());
+					newContract.setPremesisLandMark(Data.getPremesisLandMark());
+					newContract.setPremesisStreet(Data.getPremesisStreet());
+					newContract.setPremesisWardNo(Data.getPremesisWardNo());
+					newContract.setPremesisCity(Data.getPremesisCity());
+					newContract.setPremesisPinCode(Data.getPremesisPinCode());
+					newContract.setPremesisTaluka(Data.getPremesisTaluka());
+					newContract.setPremesisDistrict(Data.getPremesisDistrict());
+					newContract.setJoinaddress_Premesis(Data.getJoinaddress_Premesis());
+					newContract.setPlotNumber(Data.getPlotNumber());
+					newContract.setBuiltupArea(Data.getBuiltupArea());
+					newContract.setLattitude(Data.getLattitude());
+					newContract.setLongitude(Data.getLongitude());
+					newContract.setGpsCoordinates(Data.getGpsCoordinates());
+					newContract.setLessorPanNumber(Data.getLessorPanNumber());
+					newContract.setLessorGstNumber(Data.getLessorGstNumber());
+					newContract.setJoinaddress_Vendor(Data.getJoinaddress_Vendor());
+					newContract.setGstNo(Data.getGstNo());
+					newContract.setPanNo(Data.getPanNo());
+				}
 
 				RentContract save = rentContractRepository.save(newContract);
 				if (save != null) {
-					createRentdue(
-							Rentduecalculation.builder().escalatedMonth(Double.parseDouble(save.getSchedulePrimesis()))
-									.branchID(save.getBranchID()).contractID(save.getUniqueID())
-									.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
-									.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
-									.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
-					map.put(save.getUniqueID() + "", "save");
+					try {
+						createRentdue(Rentduecalculation.builder()
+								.escalatedMonth(Double.parseDouble(save.getSchedulePrimesis()))
+								.branchID(save.getBranchID()).contractID(save.getUniqueID())
+								.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
+								.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
+								.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
+						map.put(save.getUniqueID() + "", "save");
+					} catch (Exception x) {
+						map.put(save.getUniqueID() + "", "Due Error");
+					}
 				} else {
 					map.put(save.getUniqueID() + "", "Not save");
 				}
@@ -197,14 +203,13 @@ public class RentController {
 	 */
 	@GetMapping("/checkPcontract")
 	public Boolean checkEligiable(@RequestParam int pContractID) {
-		return !rentContractRepository.findByPriviousContractID(pContractID).stream().map(e -> e.getPriviousContractID())
-				.anyMatch(id -> id == pContractID);
-
+		if (pContractID == 0) {
+			return true;
+		} else {
+			return !rentContractRepository.findByPriviousContractID(pContractID).stream()
+					.map(e -> e.getPriviousContractID()).anyMatch(id -> id == pContractID);
+		}
 	}
-	
-//	public ResponseEntity<Responce> getDealers(){
-//		return ResponseEntity<Responce>
-//	}
 
 	/**
 	 * @API used For Change Contract_activation_Status Open to closed.
@@ -277,6 +282,7 @@ public class RentController {
 
 	@GetMapping("/getstate")
 	public ResponseEntity<Responce> getState() {
+
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce
 						.builder().data(rentContractRepository.findAll().stream().map(e -> e.getLesseeState()).sorted()
@@ -544,13 +550,15 @@ public class RentController {
 
 	@GetMapping("/getbranchdetails")
 	public ResponseEntity<Responce> getBranchDetails(@RequestParam String BranchID) {
-
 		Optional<RfBranchMaster> rfdata = rfBrachRepository.findById(BranchID);
 		if (rfdata.isPresent()) {
 			RfBranchMaster rfBranchMaster = rfdata.get();
-			RfBranchmasterDto build = RfBranchmasterDto.builder().amContactNumber(rfBranchMaster.getAmContactNumber())
-					.areaName(rfBranchMaster.getAreaName()).branchName(rfBranchMaster.getBranchName())
-					.region(rfBranchMaster.getRegion()).rfBranchID(rfBranchMaster.getRfBranchID()).build();
+			BranchDto build = BranchDto.builder().areaName(rfBranchMaster.getAreaName())
+					.branchID(rfBranchMaster.getRfBranchID()).branchName(rfBranchMaster.getBranchName())
+					.region(rfBranchMaster.getRegion()).build();
+//			RfBranchmasterDto build = RfBranchmasterDto.builder().amContactNumber(rfBranchMaster.getAmContactNumber())
+//					.areaName(rfBranchMaster.getAreaName()).branchName(rfBranchMaster.getBranchName())
+//					.region(rfBranchMaster.getRegion()).rfBranchID(rfBranchMaster.getRfBranchID()).build();
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(Responce.builder().error(Boolean.FALSE).data(build).msg("Data present..!").build());
 		} else {
@@ -564,8 +572,8 @@ public class RentController {
 				return ResponseEntity.status(HttpStatus.OK)
 						.body(Responce.builder().data(build).msg("Branch Data Exist...!").error(Boolean.FALSE).build());
 			}
-			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().data(null).msg("Branch Data Not Exist...!").error(Boolean.TRUE).build());
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(BranchDto.builder().build())
+					.msg("Branch Data Not Exist...!").error(Boolean.TRUE).build());
 		}
 	}
 
@@ -641,9 +649,16 @@ public class RentController {
 			}
 
 			RentContract save = rentContractRepository.save(rentContract);
-			responceData.add(save);
 
 			if (save != null) {
+				responceData.add(save);
+				try {
+					apirecords.save(
+							ApiCallRecords.builder().apiname("insertcontract").timeZone(LocalDate.now().toString())
+									.msg(save.getUniqueID() + "||" + save.getBranchID()).build());
+				} catch (Exception e) {
+					System.out.println("Errors Occer In apiRecord Data");
+				}
 				createRentdue(
 						Rentduecalculation.builder().escalatedMonth(Double.parseDouble(save.getSchedulePrimesis()))
 								.branchID(save.getBranchID()).contractID(save.getUniqueID())
@@ -910,7 +925,7 @@ public class RentController {
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
-				System.out.println(cID + "-&->");
+//				System.out.println(cID + "-&->");
 				generatePaymentReport(cID, month, year, "make");
 			});
 
