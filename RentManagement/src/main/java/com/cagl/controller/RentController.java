@@ -126,6 +126,8 @@ public class RentController {
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentService.getAlertContract())
 				.error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
+
+	
 	/**
 	 * @return  resolved contract to make actual
 	 * @throws Exception 
@@ -935,7 +937,7 @@ public class RentController {
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
-				// System.out.println(cID + "-&-?>");
+				 System.out.println(cID + "-&-?>");
 				generatePaymentReport(cID, month, year, "make");
 			});
 

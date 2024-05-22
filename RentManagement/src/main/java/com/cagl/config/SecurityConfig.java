@@ -42,10 +42,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			"/filterBranchIDs", "/getBranchName", "/getprovision", "/getenure", "/generatePaymentReport",
 			"/generateRawPaymentReport", "/getduereportUid", "/getduereportBid", "/getbranchids", "/getbranchdetails",
 			"/renewalDetails", "/getcontracts", "/getcontractsCID", "/getcotractBranchName", "/getallcontracts",
-			"/editcontracts", "/closecontract" };
+			"/editcontracts", "/closecontract" ,"/resolvealertContract"};
 	// PermitAll APi Login APi..
 	public static final String[] permitAllAPIs = {  "/DownloadPaymentReport", "/login", "/checkPcontract",
-			"/ConvertJsontoExcel" ,"/AlertContract"};
+			"/ConvertJsontoExcel" ,"/AlertContract","/countprovision","/countvariance"};
 
 	@Override
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {

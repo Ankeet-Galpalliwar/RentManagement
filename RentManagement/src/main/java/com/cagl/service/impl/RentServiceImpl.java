@@ -694,22 +694,50 @@ public class RentServiceImpl implements RentService {
 				.provision(provision + "").reporttds(tds + "").sdAmount(sdAmount).actualAmount(ActualAmount)
 				.gstamt(Gst + "").monthYear(month + "/" + year).build();
 	}
-	
-	
-	
 
 	@Override
 	public ArrayList<AlertDto> getAlertContract() throws ParseException {
 
 		ArrayList<AlertDto> alartContract = new ArrayList<>();
-		
-		String alertQuery = "";
+
+//		String alertQuery = "";
 		LocalDate priviousMonth = LocalDate.now().minusMonths(1);
-		alertQuery = "SELECT p.contractid,q.branchid,q.lessee_branch_name,q.lessor_name,q.rent_start_date,q.rent_end_date FROM rentmanagement.rent_actual p inner join rentmanagement.rent_contract q  on p.contractid=q.uniqueid   where q.rent_start_date<='"
+
+		/**
+		 * Below Logic is use to create Empty Actual Data For alert Contract to avoid
+		 * error in below Query.
+		 */
+		List<String> actualContract = jdbcTemplate1
+				.queryForList("SELECT distinct contractid FROM rent_actual where   start_date<='"
+						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
+						+ "' and end_date>='"
+						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "Start")
+						+ "' and year=2024;", String.class);
+		List<String> rentContract = jdbcTemplate1
+				.queryForList("SELECT distinct uniqueid FROM rent_contract where   rent_start_date<='"
+						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
+						+ "'and  rent_end_date>='"
+						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "Start")
+						+ "';", String.class);
+		rentContract.removeAll(actualContract);
+
+		if (rentContract != null) {
+			rentContract.stream().forEach(e -> {
+				RentContract Data = rentContractRepository.findById(Integer.parseInt(e)).get();
+				actualRepository.save(rentActual.builder().january("--").february("--").march("--").april("--")
+						.may("--").june("--").july("--").august("--").september("--").october("--").november("--")
+						.december("--").ContractID(Data.getUniqueID()).BranchID(Data.getBranchID())
+						.endDate(Data.getRentEndDate()).startDate(Data.getRentStartDate()).year(priviousMonth.getYear())
+						.rentActualID(Data.getUniqueID() + "-" + priviousMonth.getYear()).build());
+
+			});
+		}
+//==================================================================================================================================
+		String alertQuery = "SELECT p.contractid,q.branchid,q.lessee_branch_name,q.lessor_name,q.rent_start_date,q.rent_end_date FROM rentmanagement.rent_actual p inner join rentmanagement.rent_contract q  on p.contractid=q.uniqueid   where q.rent_start_date<='"
 				+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
 				+ "' and q.rent_end_date>='"
 				+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "Start")
-				+ "' and contract_zone='APPROVED'or " + priviousMonth.getMonth() + "='--';";
+				+ "' and contract_zone='APPROVED'and p." + priviousMonth.getMonth() + "='--';";
 		List<Map<String, Object>> priviousMonthlist = jdbcTemplate1.queryForList(alertQuery);
 		for (Map<String, Object> queryResult : priviousMonthlist) {
 			AlertDto alertDto = new AlertDto();
@@ -845,18 +873,18 @@ public class RentServiceImpl implements RentService {
 	}
 
 	@Override
-	public List<PaymentReportDto> getResolvedAlertContract() throws ParseException 
-	{
+	public List<PaymentReportDto> getResolvedAlertContract() throws ParseException {
 		ArrayList<PaymentReportDto> alartContract = new ArrayList<>();
 		LocalDate priviousMonth = LocalDate.now().minusMonths(1);
-		String	alertQuery = "SELECT p.contractid,q.branchid,q.lessee_branch_name,q.lessor_name,q.rent_start_date,q.rent_end_date FROM rentmanagement.rent_actual p inner join rentmanagement.rent_contract q  on p.contractid=q.uniqueid   where q.rent_start_date<='"
+		String alertQuery = "SELECT p.contractid,q.branchid,q.lessee_branch_name,q.lessor_name,q.rent_start_date,q.rent_end_date FROM rentmanagement.rent_actual p inner join rentmanagement.rent_contract q  on p.contractid=q.uniqueid   where q.rent_start_date<='"
 				+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
 				+ "' and q.rent_end_date>='"
 				+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "Start")
 				+ "' and contract_zone='APPROVED'and " + priviousMonth.getMonth() + "='--';";
 		List<Map<String, Object>> priviousMonthlist = jdbcTemplate1.queryForList(alertQuery);
 		for (Map<String, Object> queryResult : priviousMonthlist) {
-			PaymentReportDto reportData = generatePaymentreport("" + queryResult.get("contractid"), priviousMonth.getMonth() + "",  priviousMonth.getYear()+"", "Raw");
+			PaymentReportDto reportData = generatePaymentreport("" + queryResult.get("contractid"),
+					priviousMonth.getMonth() + "", priviousMonth.getYear() + "", "Raw");
 			alartContract.add(reportData);
 		}
 		return alartContract;
