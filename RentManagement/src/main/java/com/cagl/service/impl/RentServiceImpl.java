@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,15 +18,19 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import com.cagl.controller.RentController;
+import com.cagl.dto.AlertDto;
 import com.cagl.dto.MakeActualDto;
 import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RentContractDto;
+import com.cagl.dto.Rentduecalculation;
 import com.cagl.dto.Responce;
 import com.cagl.dto.provisionDto;
+import com.cagl.dto.varianceDto;
 import com.cagl.entity.ConfirmPaymentReport;
 import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RawPaymentReport;
 import com.cagl.entity.RentContract;
+import com.cagl.entity.StroageRentContract;
 import com.cagl.entity.Tds;
 import com.cagl.entity.Variance;
 import com.cagl.entity.provision;
@@ -42,6 +47,7 @@ import com.cagl.repository.confirmPaymentRepository;
 import com.cagl.repository.ifscMasterRepository;
 import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
+import com.cagl.repository.stroagecontactRepo;
 import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
 
@@ -49,40 +55,30 @@ import com.cagl.service.RentService;
 public class RentServiceImpl implements RentService {
 	@Autowired
 	PaymentReportRepository paymentReportRepository;
-
 	@Autowired
 	RawPaymentReportRepository rawPaymentReportRepository;
-
 	@Autowired
 	RentContractRepository rentContractRepository;
-
 	@Autowired
 	BranchDetailRepository branchDetailRepository;
-
 	@Autowired
 	RfBrachRepository rfBrachRepository;
-
 	@Autowired
 	ifscMasterRepository ifscMasterRepository;
-
 	@Autowired
 	rentDueRepository dueRepository;
-
 	@Autowired
 	provisionRepository provisionRepository;
-
 	@Autowired
 	RentActualRepository actualRepository;
-
 	@Autowired
 	SDRecoardRepository sdRepository;
-
 	@Autowired
 	varianceRepository varianceRepository;
-
+	@Autowired
+	stroagecontactRepo stroagecontactRepo;
 	@Autowired
 	private NamedParameterJdbcTemplate jdbcTemplate;
-
 	@Autowired
 	private JdbcTemplate jdbcTemplate1;
 
@@ -352,16 +348,17 @@ public class RentServiceImpl implements RentService {
 				// TODO: handle exception
 			}
 			// Here we are saving(Generated Payment Report) Data for audit purpose.
-			paymentReportRepository.save(PaymentReport.builder().Redflag(flag)
-					.branchID(rawgeneratereport.getInfo().getBranchID())
-					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
-					.contractID(contractID).due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
-					.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
-					.monthlyRent(rawgeneratereport.getMonthRent()).net(Double.parseDouble(rawgeneratereport.getNet()))
-					.provision(Double.parseDouble(rawgeneratereport.getProvision()))
-					.ActualAmount(rawgeneratereport.getActualAmount())
-					.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
-					.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
+			paymentReportRepository
+					.save(PaymentReport.builder().Redflag(flag).branchID(rawgeneratereport.getInfo().getBranchID())
+							.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
+							.contractID(Integer.parseInt(contractID)).due(rawgeneratereport.getDue())
+							.Gross(rawgeneratereport.getGross()).ID(contractID + "-" + rawgeneratereport.getMonthYear())
+							.month(month).monthlyRent(rawgeneratereport.getMonthRent())
+							.net(Double.parseDouble(rawgeneratereport.getNet()))
+							.provision(Double.parseDouble(rawgeneratereport.getProvision()))
+							.ActualAmount(rawgeneratereport.getActualAmount())
+							.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
+							.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
 			if (status.equalsIgnoreCase("CONFIRM")) {
 // -------------------At confirm payment option Data Store in confirmPayment Table---------
 				confirmPaymentRepository
@@ -382,22 +379,22 @@ public class RentServiceImpl implements RentService {
 			boolean flag = true;
 			try {
 				if (Double.parseDouble(rawgeneratereport.getActualAmount()) != rawgeneratereport.getGross()) {
-					flag = false;	
+					flag = false;
 				}
 			} catch (Exception e2) {
 				// TODO: handle exception
 			}
 // Here we are saving(Generated Payment Report) Data for audit purpose.
-			paymentReportRepository
-					.save(PaymentReport.builder().Redflag(flag).branchID(generatereport.getInfo().getBranchID())
-							.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
-							.contractID(contractID).due(generatereport.getDue()).Gross(generatereport.getGross())
-							.ID(contractID + "-" + generatereport.getMonthYear()).month(month)
-							.monthlyRent(generatereport.getMonthRent()).net(Double.parseDouble(generatereport.getNet()))
-							.provision(Double.parseDouble(generatereport.getProvision()))
-							.ActualAmount(generatereport.getActualAmount())
-							.tds(Double.parseDouble(generatereport.getReporttds()))
-							.GST(Double.parseDouble(generatereport.getGstamt())).year(year).build());
+			paymentReportRepository.save(PaymentReport.builder().Redflag(flag)
+					.branchID(generatereport.getInfo().getBranchID())
+					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
+					.contractID(Integer.parseInt(contractID)).due(generatereport.getDue())
+					.Gross(generatereport.getGross()).ID(contractID + "-" + generatereport.getMonthYear()).month(month)
+					.monthlyRent(generatereport.getMonthRent()).net(Double.parseDouble(generatereport.getNet()))
+					.provision(Double.parseDouble(generatereport.getProvision()))
+					.ActualAmount(generatereport.getActualAmount())
+					.tds(Double.parseDouble(generatereport.getReporttds()))
+					.GST(Double.parseDouble(generatereport.getGstamt())).year(year).build());
 
 			if (status.equalsIgnoreCase("CONFIRM")) {
 // -------------------At confirm payment option Data Store in confirmPayment Table---------
@@ -424,16 +421,17 @@ public class RentServiceImpl implements RentService {
 				// TODO: handle exception
 			}
 			// Here we are saving(Generated Payment Report) Data for audit purpose.
-			paymentReportRepository.save(PaymentReport.builder().Redflag(flag)
-					.branchID(rawgeneratereport.getInfo().getBranchID())
-					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
-					.contractID(contractID).due(rawgeneratereport.getDue()).Gross(rawgeneratereport.getGross())
-					.ID(contractID + "-" + rawgeneratereport.getMonthYear()).month(month)
-					.monthlyRent(rawgeneratereport.getMonthRent()).net(Double.parseDouble(rawgeneratereport.getNet()))
-					.provision(Double.parseDouble(rawgeneratereport.getProvision()))
-					.ActualAmount(rawgeneratereport.getActualAmount())
-					.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
-					.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
+			paymentReportRepository
+					.save(PaymentReport.builder().Redflag(flag).branchID(rawgeneratereport.getInfo().getBranchID())
+							.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
+							.contractID(Integer.parseInt(contractID)).due(rawgeneratereport.getDue())
+							.Gross(rawgeneratereport.getGross()).ID(contractID + "-" + rawgeneratereport.getMonthYear())
+							.month(month).monthlyRent(rawgeneratereport.getMonthRent())
+							.net(Double.parseDouble(rawgeneratereport.getNet()))
+							.provision(Double.parseDouble(rawgeneratereport.getProvision()))
+							.ActualAmount(rawgeneratereport.getActualAmount())
+							.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
+							.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
 
 // -------------------At confirm payment option Data Store in confirmPayment Table---------
 			if (status.equalsIgnoreCase("CONFIRM")) {
@@ -690,11 +688,178 @@ public class RentServiceImpl implements RentService {
 
 //			System.out.println(ActualAmount);
 		} catch (Exception e) {
-			throw new com.cagl.customexceptation.PaymentReport("Can't Generate Payment Report..! ->"+e.getMessage());
+			throw new com.cagl.customexceptation.PaymentReport("Can't Generate Payment Report..! ->" + e.getMessage());
 		}
 		return PaymentReportDto.builder().due(DueValue).Gross(gross).Info(info).monthRent(MonthRent).net(Net + "")
 				.provision(provision + "").reporttds(tds + "").sdAmount(sdAmount).actualAmount(ActualAmount)
 				.gstamt(Gst + "").monthYear(month + "/" + year).build();
+	}
+	
+	
+	
+
+	@Override
+	public ArrayList<AlertDto> getAlertContract() throws ParseException {
+
+		ArrayList<AlertDto> alartContract = new ArrayList<>();
+		
+		String alertQuery = "";
+		LocalDate priviousMonth = LocalDate.now().minusMonths(1);
+		alertQuery = "SELECT p.contractid,q.branchid,q.lessee_branch_name,q.lessor_name,q.rent_start_date,q.rent_end_date FROM rentmanagement.rent_actual p inner join rentmanagement.rent_contract q  on p.contractid=q.uniqueid   where q.rent_start_date<='"
+				+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
+				+ "' and q.rent_end_date>='"
+				+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "Start")
+				+ "' and contract_zone='APPROVED'or " + priviousMonth.getMonth() + "='--';";
+		List<Map<String, Object>> priviousMonthlist = jdbcTemplate1.queryForList(alertQuery);
+		for (Map<String, Object> queryResult : priviousMonthlist) {
+			AlertDto alertDto = new AlertDto();
+			alertDto.setContractID("" + queryResult.get("contractid"));
+			alertDto.setBranchid((String) queryResult.get("branchid"));
+			alertDto.setLessee_branch_name((String) queryResult.get("lessee_branch_name"));
+			alertDto.setLessorName((String) queryResult.get("lessor_name"));
+			alertDto.setRent_start_date(queryResult.get("rent_start_date") + "");
+			alertDto.setRentEndDate(queryResult.get("rent_end_date") + "");
+			alertDto.setActualAmount("--");
+			alertDto.setMonthYear(priviousMonth.getMonth() + "/" + priviousMonth.getYear());
+			alartContract.add(alertDto);
+		}
+//		LocalDate curentMonth = LocalDate.now();
+//		alertQuery = "SELECT p.contractid,q.branchid,q.lessee_branch_name,q.lessor_name,q.rent_start_date,q.rent_end_date FROM rentmanagement.rent_actual p inner join rentmanagement.rent_contract q  on p.contractid=q.uniqueid   where q.rent_start_date<='"
+//				+ RentController.getFlagDate(curentMonth.getMonth() + "", curentMonth.getYear(), "End")
+//				+ "' and q.rent_end_date>='"
+//				+ RentController.getFlagDate(curentMonth.getMonth() + "", curentMonth.getYear(), "Start")
+//				+ "' and contract_zone='APPROVED'and " + curentMonth.getMonth() + "='--';";
+//		List<Map<String, Object>> curentMonthList = jdbcTemplate1.queryForList(alertQuery);
+//		for (Map<String, Object> queryResult : curentMonthList) {
+//			AlertDto alertDto = new AlertDto();
+//			alertDto.setContractID("" + queryResult.get("contractid"));
+//			alertDto.setBranchid((String) queryResult.get("branchid"));
+//			alertDto.setLessee_branch_name((String) queryResult.get("lessee_branch_name"));
+//			alertDto.setLessorName((String) queryResult.get("lessor_name"));
+//			alertDto.setRent_start_date(queryResult.get("rent_start_date") + "");
+//			alertDto.setRentEndDate(queryResult.get("rent_end_date") + "");
+//			alertDto.setActualAmount("--");
+//			alertDto.setMonthYear(curentMonth.getMonth() + "/" + curentMonth.getYear());
+//			alartContract.add(alertDto);
+//		}
+		/**
+		 * 
+		 */
+		int MaxID = rentContractRepository.getmaxapprovedID();
+		List<RentContract> getalertcontract = rentContractRepository.getalertcontract(MaxID);
+		if (getalertcontract != null) {
+			List<AlertDto> UpdatedContract = getalertcontract.stream().map(e -> {
+				return AlertDto.builder().actualAmount("NA").branchid(e.getBranchID()).contractID(e.getUniqueID() + "")
+						.lessee_branch_name(e.getLesseeBranchName()).lessorName(e.getLessorName()).monthYear("NA")
+						.rent_start_date(e.getRentStartDate().toString()).rentEndDate(e.getRentEndDate().toString())
+						.build();
+			}).collect(Collectors.toList());
+			alartContract.addAll(UpdatedContract);
+		}
+
+		return alartContract;
+	}
+
+	@Override
+	public LinkedHashMap insertContracts() {
+		LinkedHashMap<String, String> map = new LinkedHashMap<>();
+
+		List<StroageRentContract> collect = stroagecontactRepo.findAll().stream()
+				.sorted(Comparator.comparing(StroageRentContract::getUniqueID)).collect(Collectors.toList());
+		collect.stream().forEach(e -> {
+			map.put(e.getUniqueID() + "", "");
+			Optional<RentContract> findById = rentContractRepository.findById(e.getUniqueID());
+			if (!findById.isPresent()) {
+				RentContract newContract = new RentContract();
+				BeanUtils.copyProperties(e, newContract);
+//				RentContract Data = rentContractRepository.findByBranchID(e.getBranchID()).get(0);
+				List<RentContract> findByBranchID = rentContractRepository.findByBranchID(e.getBranchID());
+				if (findByBranchID.size() > 0) {
+					RentContract Data = findByBranchID.get(0);
+					newContract.setPremesisDoorNumber(Data.getPremesisDoorNumber());
+					newContract.setPremesisFloorNumber(Data.getPremesisFloorNumber());
+					newContract.setPremesisLandMark(Data.getPremesisLandMark());
+					newContract.setPremesisStreet(Data.getPremesisStreet());
+					newContract.setPremesisWardNo(Data.getPremesisWardNo());
+					newContract.setPremesisCity(Data.getPremesisCity());
+					newContract.setPremesisPinCode(Data.getPremesisPinCode());
+					newContract.setPremesisTaluka(Data.getPremesisTaluka());
+					newContract.setPremesisDistrict(Data.getPremesisDistrict());
+					newContract.setJoinaddress_Premesis(Data.getJoinaddress_Premesis());
+					newContract.setPlotNumber(Data.getPlotNumber());
+					newContract.setBuiltupArea(Data.getBuiltupArea());
+					newContract.setLattitude(Data.getLattitude());
+					newContract.setLongitude(Data.getLongitude());
+					newContract.setGpsCoordinates(Data.getGpsCoordinates());
+					newContract.setLessorPanNumber(Data.getLessorPanNumber());
+					newContract.setLessorGstNumber(Data.getLessorGstNumber());
+					newContract.setJoinaddress_Vendor(Data.getJoinaddress_Vendor());
+					newContract.setGstNo(Data.getGstNo());
+					newContract.setPanNo(Data.getPanNo());
+				}
+
+				RentContract save = rentContractRepository.save(newContract);
+				if (save != null) {
+					try {
+						RentController controller = new RentController();
+						controller.createRentdue(Rentduecalculation.builder()
+								.escalatedMonth(Double.parseDouble(save.getSchedulePrimesis()))
+								.branchID(save.getBranchID()).contractID(save.getUniqueID())
+								.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
+								.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
+								.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
+						map.put(save.getUniqueID() + "", "save");
+					} catch (Exception x) {
+						map.put(save.getUniqueID() + "", "Due Error");
+					}
+				} else {
+					map.put(save.getUniqueID() + "", "Not save");
+				}
+			} else {
+				map.put(e.getUniqueID() + "", "Already Exist");
+			}
+		});
+		return map;
+
+	}
+
+	@Override
+	public List<varianceDto> getvariance(String contractID) {
+		List<varianceDto> allvariDtos = new ArrayList<>();
+		List<Variance> allVariance = new ArrayList<>();
+		if (contractID.equalsIgnoreCase("all"))
+			allVariance = varianceRepository.findAll();
+		else
+			allVariance = varianceRepository.findByContractID(contractID);
+		if (!allVariance.isEmpty() & allVariance != null) {
+			allVariance.stream().forEach(e -> {
+				varianceDto varianceDto = new varianceDto();
+				BeanUtils.copyProperties(e, varianceDto);
+				RentContractDto contractDto = new RentContractDto();
+				BeanUtils.copyProperties(e.getContractInfo(), contractDto);
+				varianceDto.setInfo(contractDto);
+				allvariDtos.add(varianceDto);
+			});
+		}
+		return allvariDtos;
+	}
+
+	@Override
+	public List<PaymentReportDto> getResolvedAlertContract() throws ParseException 
+	{
+		ArrayList<PaymentReportDto> alartContract = new ArrayList<>();
+		LocalDate priviousMonth = LocalDate.now().minusMonths(1);
+		String	alertQuery = "SELECT p.contractid,q.branchid,q.lessee_branch_name,q.lessor_name,q.rent_start_date,q.rent_end_date FROM rentmanagement.rent_actual p inner join rentmanagement.rent_contract q  on p.contractid=q.uniqueid   where q.rent_start_date<='"
+				+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
+				+ "' and q.rent_end_date>='"
+				+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "Start")
+				+ "' and contract_zone='APPROVED'and " + priviousMonth.getMonth() + "='--';";
+		List<Map<String, Object>> priviousMonthlist = jdbcTemplate1.queryForList(alertQuery);
+		for (Map<String, Object> queryResult : priviousMonthlist) {
+			PaymentReportDto reportData = generatePaymentreport("" + queryResult.get("contractid"), priviousMonth.getMonth() + "",  priviousMonth.getYear()+"", "Raw");
+			alartContract.add(reportData);
+		}
+		return alartContract;
 	}
 
 }

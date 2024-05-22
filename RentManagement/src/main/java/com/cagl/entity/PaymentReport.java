@@ -38,7 +38,7 @@ public class PaymentReport {
 	private String month;
 	private String year;
 	private String ActualAmount;
-	private String contractID;
+	private int contractID;
 	private String branchID;
 	private boolean Redflag;//Base on Raw_Report Actual And Gross Difference
 

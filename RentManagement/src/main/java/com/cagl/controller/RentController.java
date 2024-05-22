@@ -33,7 +33,6 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -48,10 +47,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.cagl.dto.AlertDto;
 import com.cagl.dto.BranchDto;
 import com.cagl.dto.BulkProvisionDeletion;
 import com.cagl.dto.MakeActualDto;
@@ -61,20 +60,16 @@ import com.cagl.dto.RentContractDto;
 import com.cagl.dto.RentDueDto;
 import com.cagl.dto.Rentduecalculation;
 import com.cagl.dto.Responce;
-import com.cagl.dto.RfBranchmasterDto;
 import com.cagl.dto.SDRecoardDto;
 import com.cagl.dto.TenureDto;
 import com.cagl.dto.provisionDto;
 import com.cagl.dto.varianceDto;
 import com.cagl.entity.ApiCallRecords;
-import com.cagl.entity.BranchDetail;
 import com.cagl.entity.IfscMaster;
 import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RawPaymentReport;
 import com.cagl.entity.RentContract;
 import com.cagl.entity.RentDue;
-import com.cagl.entity.RfBranchMaster;
-import com.cagl.entity.StroageRentContract;
 import com.cagl.entity.Variance;
 import com.cagl.entity.provision;
 import com.cagl.repository.ApiCallRepository;
@@ -88,7 +83,6 @@ import com.cagl.repository.SDRecoardRepository;
 import com.cagl.repository.ifscMasterRepository;
 import com.cagl.repository.provisionRepository;
 import com.cagl.repository.rentDueRepository;
-import com.cagl.repository.stroagecontactRepo;
 import com.cagl.repository.varianceRepository;
 import com.cagl.service.RentService;
 
@@ -127,74 +121,40 @@ public class RentController {
 	@Autowired
 	JdbcTemplate jdbcTemplate;
 
+	@GetMapping("/AlertContract")
+	public ResponseEntity<Responce> getAlertContract() throws ParseException {
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentService.getAlertContract())
+				.error(Boolean.FALSE).msg("Alerts Contracts").build());
+	}
+	/**
+	 * @return  resolved contract to make actual
+	 * @throws Exception 
+	 */
+	@GetMapping("/resolvealertContract")
+	public ResponseEntity<Responce> getResolvedAlertContract() throws Exception {
+		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentService.getResolvedAlertContract())
+				.error(Boolean.FALSE).msg("Alerts Contracts").build());
+	}
+
+	@GetMapping("/countprovision")
+	public int getProvisionCount(@RequestParam int year) {
+		return rentContractRepository.getProvisionCount(year);
+	}
+
+	@GetMapping("/countvariance")
+	public int getVarianceCount(@RequestParam int year) {
+		return rentContractRepository.getVarianceCount(year);
+	}
+
 	/**
 	 * @APi use only for Add Contract from back-end.
 	 * @StorageRentContract Entity (Table) used.
 	 * 
 	 * @return
 	 */
-	@Autowired
-	stroagecontactRepo stroagecontactRepo;
-
 	@GetMapping("transferContract")
 	public LinkedHashMap insertData() {
-		LinkedHashMap<String, String> map = new LinkedHashMap<>();
-
-		List<StroageRentContract> collect = stroagecontactRepo.findAll().stream()
-				.sorted(Comparator.comparing(StroageRentContract::getUniqueID)).collect(Collectors.toList());
-		collect.stream().forEach(e -> {
-			map.put(e.getUniqueID() + "", "");
-			Optional<RentContract> findById = rentContractRepository.findById(e.getUniqueID());
-			if (!findById.isPresent()) {
-				RentContract newContract = new RentContract();
-				BeanUtils.copyProperties(e, newContract);
-//				RentContract Data = rentContractRepository.findByBranchID(e.getBranchID()).get(0);
-				List<RentContract> findByBranchID = rentContractRepository.findByBranchID(e.getBranchID());
-				if (findByBranchID.size() > 0) {
-					RentContract Data = findByBranchID.get(0);
-					newContract.setPremesisDoorNumber(Data.getPremesisDoorNumber());
-					newContract.setPremesisFloorNumber(Data.getPremesisFloorNumber());
-					newContract.setPremesisLandMark(Data.getPremesisLandMark());
-					newContract.setPremesisStreet(Data.getPremesisStreet());
-					newContract.setPremesisWardNo(Data.getPremesisWardNo());
-					newContract.setPremesisCity(Data.getPremesisCity());
-					newContract.setPremesisPinCode(Data.getPremesisPinCode());
-					newContract.setPremesisTaluka(Data.getPremesisTaluka());
-					newContract.setPremesisDistrict(Data.getPremesisDistrict());
-					newContract.setJoinaddress_Premesis(Data.getJoinaddress_Premesis());
-					newContract.setPlotNumber(Data.getPlotNumber());
-					newContract.setBuiltupArea(Data.getBuiltupArea());
-					newContract.setLattitude(Data.getLattitude());
-					newContract.setLongitude(Data.getLongitude());
-					newContract.setGpsCoordinates(Data.getGpsCoordinates());
-					newContract.setLessorPanNumber(Data.getLessorPanNumber());
-					newContract.setLessorGstNumber(Data.getLessorGstNumber());
-					newContract.setJoinaddress_Vendor(Data.getJoinaddress_Vendor());
-					newContract.setGstNo(Data.getGstNo());
-					newContract.setPanNo(Data.getPanNo());
-				}
-
-				RentContract save = rentContractRepository.save(newContract);
-				if (save != null) {
-					try {
-						createRentdue(Rentduecalculation.builder()
-								.escalatedMonth(Double.parseDouble(save.getSchedulePrimesis()))
-								.branchID(save.getBranchID()).contractID(save.getUniqueID())
-								.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
-								.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
-								.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
-						map.put(save.getUniqueID() + "", "save");
-					} catch (Exception x) {
-						map.put(save.getUniqueID() + "", "Due Error");
-					}
-				} else {
-					map.put(save.getUniqueID() + "", "Not save");
-				}
-			} else {
-				map.put(e.getUniqueID() + "", "Already Exist");
-			}
-		});
-		return map;
+		return rentService.insertContracts();
 	}
 
 	/**
@@ -218,22 +178,26 @@ public class RentController {
 	@GetMapping("/closecontract")
 	public int ChangeContractStatus(Authentication user, @RequestParam String contractId) {
 
-		apirecords.save(ApiCallRecords.builder().apiname("closecontract")
-				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-				.msg(contractId + "-" + user.getName()).build());
+		if (rentContractRepository.findById(Integer.parseInt(contractId)).get().getRentEndDate()
+				.isAfter(LocalDate.now())) {
+			apirecords.save(ApiCallRecords.builder().apiname("closecontract")
+					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+					.msg(contractId + "-" + user.getName()).build());
 
-		return jdbcTemplate.update(
-				"update rent_contract set agreement_activation_status='Closed' where uniqueid=" + contractId + ";");
+			return jdbcTemplate.update(
+					"update rent_contract set agreement_activation_status='Closed' where uniqueid=" + contractId + ";");
+		}
+		return 0;
 	}
 
-	@PostMapping("changestatus")
-	public ResponseEntity<Responce> changeContract(Authentication user, @RequestParam String branchID) {
-		apirecords.save(ApiCallRecords.builder().apiname("closecontract")
-				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-				.msg(branchID + "-" + user.getName()).build());
-		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().build());
-
-	}
+//	@PostMapping("changestatus")
+//	public ResponseEntity<Responce> changeContract(Authentication user, @RequestParam String branchID) {
+//		apirecords.save(ApiCallRecords.builder().apiname("closecontract")
+//				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+//				.msg(branchID + "-" + user.getName()).build());
+//		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().build());
+//
+//	}
 
 	/**
 	 * @APi use to approved pending contracts
@@ -247,26 +211,10 @@ public class RentController {
 
 	@GetMapping("/getvariance")
 	public ResponseEntity<Responce> getvariance(@RequestParam String contractID) {
-		List<varianceDto> allvariDtos = new ArrayList<>();
-		List<Variance> allVariance = new ArrayList<>();
-		if (contractID.equalsIgnoreCase("all"))
-			allVariance = varianceRepository.findAll();
-		else
-			allVariance = varianceRepository.findByContractID(contractID);
-		if (!allVariance.isEmpty() & allVariance != null) {
-			allVariance.stream().forEach(e -> {
-				varianceDto varianceDto = new varianceDto();
-				BeanUtils.copyProperties(e, varianceDto);
-				RentContractDto contractDto = new RentContractDto();
-				BeanUtils.copyProperties(e.getContractInfo(), contractDto);
-				varianceDto.setInfo(contractDto);
-				allvariDtos.add(varianceDto);
-			});
-		}
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder()
-						.data(allvariDtos.stream().sorted(Comparator.comparing(varianceDto::getFlag))
-								.collect(Collectors.toList()))
+						.data(rentService.getvariance(contractID).stream()
+								.sorted(Comparator.comparing(varianceDto::getFlag)).collect(Collectors.toList()))
 						.error(Boolean.FALSE).msg("ALL variance [" + contractID + "]").build());
 	}
 
@@ -282,7 +230,6 @@ public class RentController {
 
 	@GetMapping("/getstate")
 	public ResponseEntity<Responce> getState() {
-
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce
 						.builder().data(rentContractRepository.findAll().stream().map(e -> e.getLesseeState()).sorted()
@@ -312,9 +259,31 @@ public class RentController {
 						.error(Boolean.FALSE).msg("All Brannches").build());
 	}
 
+	@GetMapping("/getAreaName")
+	public ResponseEntity<Responce> getAreaName() {
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder()
+						.data(rentContractRepository.getAreaName().stream().sorted().collect(Collectors.toList()))
+						.error(Boolean.FALSE).msg("All Areas").build());
+	}
+
+	@GetMapping("/getZoneName")
+	public ResponseEntity<Responce> getZoneName() {
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder()
+						.data(rentContractRepository.getZoneName().stream().sorted().collect(Collectors.toList()))
+						.error(Boolean.FALSE).msg("All Zones").build());
+	}
+
+	@GetMapping("/getDivisionName")
+	public ResponseEntity<Responce> getDivisionName() {
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder()
+						.data(rentContractRepository.getDivisionName().stream().sorted().collect(Collectors.toList()))
+						.error(Boolean.FALSE).msg("All Division").build());
+	}
+
 	/**
-	 * NON USE API
-	 * 
 	 * @param sdrecord
 	 * @throws ParseException
 	 */
@@ -414,7 +383,7 @@ public class RentController {
 			provisionRepository.delete(provision);
 			// -----------------------------------------
 			// ---API CALL RECORD SAVE---
-			apirecords.save(ApiCallRecords.builder().apiname("Delete Provision")
+			apirecords.save(ApiCallRecords.builder().apiname("deleteProvision")
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(provision.toString()).build());
 
@@ -550,37 +519,58 @@ public class RentController {
 
 	@GetMapping("/getbranchdetails")
 	public ResponseEntity<Responce> getBranchDetails(@RequestParam String BranchID) {
-		Optional<RfBranchMaster> rfdata = rfBrachRepository.findById(BranchID);
-		if (rfdata.isPresent()) {
-			RfBranchMaster rfBranchMaster = rfdata.get();
-			BranchDto build = BranchDto.builder().areaName(rfBranchMaster.getAreaName())
-					.branchID(rfBranchMaster.getRfBranchID()).branchName(rfBranchMaster.getBranchName())
-					.region(rfBranchMaster.getRegion()).build();
-//			RfBranchmasterDto build = RfBranchmasterDto.builder().amContactNumber(rfBranchMaster.getAmContactNumber())
-//					.areaName(rfBranchMaster.getAreaName()).branchName(rfBranchMaster.getBranchName())
-//					.region(rfBranchMaster.getRegion()).rfBranchID(rfBranchMaster.getRfBranchID()).build();
+
+		List<RentContract> contractData = rentContractRepository.findByBranchID(BranchID);
+
+		if (contractData != null) {
+
 			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().error(Boolean.FALSE).data(build).msg("Data present..!").build());
+					.body(Responce.builder().error(Boolean.FALSE)
+							.data(contractData.stream().sorted(Comparator.comparing(RentContract::getUniqueID))
+									.reduce((first, second) -> second).map(e -> {
+										return BranchDto.builder().branchID(e.getBranchID())
+												.branchName(e.getLesseeBranchName()).areaName(e.getLesseeAreaName())
+												.region(e.getLesseeDivision()).state(e.getLesseeState())
+												.zone(e.getLesseeZone()).build();
+									}).get())
+							.msg("Data present..!").build());
+
 		} else {
-			Optional<BranchDetail> glData = branchDetailRepository.findById(BranchID);
-			if (glData.isPresent()) {
-				BranchDetail branchDetail = glData.get();
-				BranchDto build = BranchDto.builder().areaName(branchDetail.getAreaName())
-						.branchID(branchDetail.getBranchID()).branchName(branchDetail.getBranchName())
-						.region(branchDetail.getRegion()).state(branchDetail.getState()).zone(branchDetail.getZone())
-						.build();
-				return ResponseEntity.status(HttpStatus.OK)
-						.body(Responce.builder().data(build).msg("Branch Data Exist...!").error(Boolean.FALSE).build());
-			}
 			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(BranchDto.builder().build())
 					.msg("Branch Data Not Exist...!").error(Boolean.TRUE).build());
 		}
+
+//		Optional<RfBranchMaster> rfdata = rfBrachRepository.findById(BranchID);
+//		if (rfdata.isPresent()) {
+//			RfBranchMaster rfBranchMaster = rfdata.get();
+//			BranchDto build = BranchDto.builder().areaName(rfBranchMaster.getAreaName())
+//					.branchID(rfBranchMaster.getRfBranchID()).branchName(rfBranchMaster.getBranchName())
+//					.region(rfBranchMaster.getRegion()).build();
+////			RfBranchmasterDto build = RfBranchmasterDto.builder().amContactNumber(rfBranchMaster.getAmContactNumber())
+////					.areaName(rfBranchMaster.getAreaName()).branchName(rfBranchMaster.getBranchName())
+////					.region(rfBranchMaster.getRegion()).rfBranchID(rfBranchMaster.getRfBranchID()).build();
+//			return ResponseEntity.status(HttpStatus.OK)
+//					.body(Responce.builder().error(Boolean.FALSE).data(build).msg("Data present..!").build());
+//		} else {
+//			Optional<BranchDetail> glData = branchDetailRepository.findById(BranchID);
+//			if (glData.isPresent()) {
+//				BranchDetail branchDetail = glData.get();
+//				BranchDto build = BranchDto.builder().areaName(branchDetail.getAreaName())
+//						.branchID(branchDetail.getBranchID()).branchName(branchDetail.getBranchName())
+//						.region(branchDetail.getRegion()).state(branchDetail.getState()).zone(branchDetail.getZone())
+//						.build();
+//				return ResponseEntity.status(HttpStatus.OK)
+//						.body(Responce.builder().data(build).msg("Branch Data Exist...!").error(Boolean.FALSE).build());
+//			}
+//			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(BranchDto.builder().build())
+//					.msg("Branch Data Not Exist...!").error(Boolean.TRUE).build());
+//		}
 	}
 
 	@GetMapping("/renewalDetails")
-	public ResponseEntity<Responce> getinfo(@RequestParam String BranchID) {
+	public ResponseEntity<Responce> getinfo(@RequestParam String BranchName) {
 
-		List<RentContract> contractData = rentContractRepository.findByBranchID(BranchID);
+		List<RentContract> contractData = rentContractRepository.findByLesseeBranchName(BranchName);
 		if (contractData != null)
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(Responce.builder().error(Boolean.FALSE)
@@ -702,7 +692,12 @@ public class RentController {
 		rentContract.setUniqueID(uniqueID);
 		rentContract.setContractZone("PENDING");
 		rentContract.setEditer(authentication.getName());
-		rentContract.setETimeZone(LocalDate.now().toString());
+		if (rentContract.getContractZone().equalsIgnoreCase("PENDING")) {// Its use full to Separate pending Screen
+																	// Contract(setETimeZone)-> null value used in logic.
+			rentContract.setETimeZone(rentContract.getETimeZone());
+		} else {
+			rentContract.setETimeZone(LocalDate.now().toString());
+		}
 		RentContract save = rentContractRepository.save(rentContract);
 		if (save != null & flagCheck) {
 			// ---API CALL RECORD SAVE---
@@ -721,12 +716,27 @@ public class RentController {
 	}
 
 	/**
-	 * @ Pending Contract API (Checker Screen)
+	 * @ Newly added Pending Contract API (Checker Screen)
 	 */
-	@GetMapping("/getpendingcontract")
-	public ResponseEntity<Responce> getPendingContract() {
+	@GetMapping("/getnewpendingcontract")
+	public ResponseEntity<Responce> getNewPendingContract() {
 		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(rentContractRepository.findByContractZone("PENDING").stream().map(e -> {
+				.body(Responce.builder().data(rentContractRepository.getNewPendingContract().stream().map(e -> {
+					RentContractDto Dto = new RentContractDto();
+					BeanUtils.copyProperties(e, Dto);
+					return Dto;
+				}).collect(Collectors.toList())).error(Boolean.FALSE)
+
+						.msg("Pending Contract").build());
+	}
+
+	/**
+	 * @ Updated Pending Contract API (Checker Screen)
+	 */
+	@GetMapping("/getupdatpendingcontract")
+	public ResponseEntity<Responce> getUpdatedPendingContract() {
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().data(rentContractRepository.getUpdatedPendingContract().stream().map(e -> {
 					RentContractDto Dto = new RentContractDto();
 					BeanUtils.copyProperties(e, Dto);
 					return Dto;
@@ -925,7 +935,7 @@ public class RentController {
 		if (IDs != null & !IDs.isEmpty())
 			IDs.stream().forEach(cID -> {
 				// HERE WE MODIFY PAYMENT REPORT
-//				System.out.println(cID + "-&->");
+				// System.out.println(cID + "-&-?>");
 				generatePaymentReport(cID, month, year, "make");
 			});
 
@@ -1807,6 +1817,10 @@ public class RentController {
 			throws IOException {
 		List<PaymentReport> collect = paymentReportRepository.findByMonthAndYear(month, year);
 		if (!collect.isEmpty() & collect != null) {
+
+//			List<Integer> collect2 = collect.stream().map(data-> Integer.parseInt(data.getContractID())).sorted(Comparator.reverseOrder())
+//					.collect(Collectors.toList());
+
 			List<PaymentReport> data = collect.stream()
 					.sorted(Comparator.comparing(PaymentReport::getContractID).reversed()).collect(Collectors.toList());
 			// Create Excel Structure
@@ -1943,13 +1957,12 @@ public class RentController {
 					// clear temp_list
 					tempL.clear();
 
-					if (data.stream().anyMatch(obj -> obj.getContractID()
-							.equalsIgnoreCase(D.getContractInfo().getPriviousContractID() + ""))) {
+					if (data.stream()
+							.anyMatch(obj -> obj.getContractID() == D.getContractInfo().getPriviousContractID())) {
 
 						tempL.add(D);
 						PaymentReport linkedcontract = data.stream()
-								.filter(id -> id.getContractID()
-										.equalsIgnoreCase(D.getContractInfo().getPriviousContractID() + ""))
+								.filter(id -> id.getContractID() == D.getContractInfo().getPriviousContractID())
 								.collect(Collectors.toList()).get(0);
 
 						tempL.add(linkedcontract);

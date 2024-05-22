@@ -16,6 +16,15 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 
 	@Query(value = "SELECT  distinct lessee_branch_name  FROM rent_contract", nativeQuery = true)
 	List<String> getbranchNames();
+	
+	@Query(value = "SELECT  distinct lessee_area_name  FROM rent_contract", nativeQuery = true)
+	List<String> getAreaName();
+	
+	@Query(value = "SELECT  distinct lessee_zone  FROM rent_contract", nativeQuery = true)
+	List<String> getZoneName();
+	
+	@Query(value = "SELECT  distinct lessee_division  FROM rent_contract", nativeQuery = true)
+	List<String> getDivisionName();
 
 	@Query(value = "SELECT  distinct branchid  FROM rent_contract", nativeQuery = true)
 	List<String> getbranchIds();
@@ -28,6 +37,8 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 
 	List<RentContract> findByBranchID(String branchID);
 	
+	List<RentContract> findByLesseeBranchName(String branchName);
+	
 	/**
 	 * @API use to avoid Duplicate in p_Contrct_ID
 	 * @param ID
@@ -37,10 +48,14 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 
 	/**
 	 * @ for Pending COntract(Checker Screen)
-	 * @param ContractZoneStatus
+	 * @param ContractZoneStatus and e_time_zone 
 	 * @return
 	 */
-	List<RentContract> findByContractZone(String ContractZoneStatus);
+	@Query(value = "SELECT * FROM rent_contract where contract_zone='PENDING' and e_time_zone=null", nativeQuery = true)
+	List<RentContract> getNewPendingContract();
+
+	@Query(value = "SELECT * FROM rent_contract where contract_zone='PENDING' and e_time_zone!=null", nativeQuery = true)
+	List<RentContract> getUpdatedPendingContract();
 
 	@Query(value = "Select uniqueid from rent_contract", nativeQuery = true)
 	List<Integer> getids();
@@ -51,11 +66,20 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	@Query(value = "SELECT agreement_activation_status FROM rent_contract where uniqueid=:uid", nativeQuery = true)
 	String getstatus(@Param("uid") int uid);
 
-	@Query(value = "SELECT uniqueid FROM rent_contract where agreement_activation_status ='Open' and rent_start_date<=:EflagDate and rent_end_date>=:SflagDate", nativeQuery = true)
+	@Query(value = "SELECT uniqueid FROM rent_contract where agreement_activation_status ='Open' and rent_start_date<=:EflagDate and rent_end_date>=:SflagDate and contract_zone='APPROVED'", nativeQuery = true)
 	List<String> getcontractIDs(@Param("SflagDate") String SflagDate, @Param("EflagDate") String EflagDate);
 
-//	@Query(value = "SELECT uniqueid FROM rent_contract where agreement_activation_status ='Open' and rent_start_date<=:flagDate and rent_end_date>=:flagDate", nativeQuery = true)
-//	void getBranchNames();
+	@Query(value = "SELECT max(uniqueid) FROM rentmanagement.rent_contract where contract_zone='Approved'",nativeQuery = true)
+	int getmaxapprovedID();
+
+	@Query(value = "SELECT * FROM rentmanagement.rent_contract where contract_zone='pending' and uniqueid<:maxID",nativeQuery = true)
+	 List<RentContract> getalertcontract(@Param("maxID")int maxID);
+
+	@Query(value = "SELECT count(*)  FROM provision where year=:year",nativeQuery = true)
+	int getProvisionCount(@Param("year") int year);
+
+	@Query(value = "SELECT count(*)  FROM variance where year=:year",nativeQuery = true)
+	int getVarianceCount(@Param("year") int year);
 
 	/*
 	 * @ Error->{Due to incorrect ResultSet}
