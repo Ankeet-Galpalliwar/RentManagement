@@ -22,6 +22,8 @@ public class PaymentReportDto {
 	private double monthRent;
 //	private double initialRent;
 	private String monthYear;
+	private String month;
+	private String year;
 	private RentContractDto Info;
 	//Field is use for Payment Done or not
 	private boolean PaymentFlag;

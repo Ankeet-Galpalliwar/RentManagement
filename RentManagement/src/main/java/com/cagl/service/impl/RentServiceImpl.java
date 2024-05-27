@@ -75,8 +75,7 @@ public class RentServiceImpl implements RentService {
 	SDRecoardRepository sdRepository;
 	@Autowired
 	varianceRepository varianceRepository;
-	@Autowired
-	stroagecontactRepo stroagecontactRepo;
+	
 	@Autowired
 	private NamedParameterJdbcTemplate jdbcTemplate;
 	@Autowired
@@ -145,7 +144,6 @@ public class RentServiceImpl implements RentService {
 		if (!actualDto.isEmpty() & actualDto != null) {
 			// Get on by one Actual Data
 			LocalDate now = LocalDate.now();
-
 			actualDto.stream().filter(e -> {
 				boolean pCondition = false;//
 				LocalDate flagDate = null;
@@ -172,6 +170,7 @@ public class RentServiceImpl implements RentService {
 //				} else if (getvalue.get(0).equalsIgnoreCase("--")) {
 //					pCondition = true;
 //				}
+
 				if (flagDate.isAfter(now) || pCondition) {
 					responce.put("--", e.getContractID() + "NOT PAID Not Eligible");
 					return false;
@@ -789,69 +788,6 @@ public class RentServiceImpl implements RentService {
 	}
 
 	@Override
-	public LinkedHashMap insertContracts() {
-		LinkedHashMap<String, String> map = new LinkedHashMap<>();
-
-		List<StroageRentContract> collect = stroagecontactRepo.findAll().stream()
-				.sorted(Comparator.comparing(StroageRentContract::getUniqueID)).collect(Collectors.toList());
-		collect.stream().forEach(e -> {
-			map.put(e.getUniqueID() + "", "");
-			Optional<RentContract> findById = rentContractRepository.findById(e.getUniqueID());
-			if (!findById.isPresent()) {
-				RentContract newContract = new RentContract();
-				BeanUtils.copyProperties(e, newContract);
-//				RentContract Data = rentContractRepository.findByBranchID(e.getBranchID()).get(0);
-				List<RentContract> findByBranchID = rentContractRepository.findByBranchID(e.getBranchID());
-				if (findByBranchID.size() > 0) {
-					RentContract Data = findByBranchID.get(0);
-					newContract.setPremesisDoorNumber(Data.getPremesisDoorNumber());
-					newContract.setPremesisFloorNumber(Data.getPremesisFloorNumber());
-					newContract.setPremesisLandMark(Data.getPremesisLandMark());
-					newContract.setPremesisStreet(Data.getPremesisStreet());
-					newContract.setPremesisWardNo(Data.getPremesisWardNo());
-					newContract.setPremesisCity(Data.getPremesisCity());
-					newContract.setPremesisPinCode(Data.getPremesisPinCode());
-					newContract.setPremesisTaluka(Data.getPremesisTaluka());
-					newContract.setPremesisDistrict(Data.getPremesisDistrict());
-					newContract.setJoinaddress_Premesis(Data.getJoinaddress_Premesis());
-					newContract.setPlotNumber(Data.getPlotNumber());
-					newContract.setBuiltupArea(Data.getBuiltupArea());
-					newContract.setLattitude(Data.getLattitude());
-					newContract.setLongitude(Data.getLongitude());
-					newContract.setGpsCoordinates(Data.getGpsCoordinates());
-					newContract.setLessorPanNumber(Data.getLessorPanNumber());
-					newContract.setLessorGstNumber(Data.getLessorGstNumber());
-					newContract.setJoinaddress_Vendor(Data.getJoinaddress_Vendor());
-					newContract.setGstNo(Data.getGstNo());
-					newContract.setPanNo(Data.getPanNo());
-				}
-
-				RentContract save = rentContractRepository.save(newContract);
-				if (save != null) {
-					try {
-						RentController controller = new RentController();
-						controller.createRentdue(Rentduecalculation.builder()
-								.escalatedMonth(Double.parseDouble(save.getSchedulePrimesis()))
-								.branchID(save.getBranchID()).contractID(save.getUniqueID())
-								.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
-								.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
-								.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
-						map.put(save.getUniqueID() + "", "save");
-					} catch (Exception x) {
-						map.put(save.getUniqueID() + "", "Due Error");
-					}
-				} else {
-					map.put(save.getUniqueID() + "", "Not save");
-				}
-			} else {
-				map.put(e.getUniqueID() + "", "Already Exist");
-			}
-		});
-		return map;
-
-	}
-
-	@Override
 	public List<varianceDto> getvariance(String contractID) {
 		List<varianceDto> allvariDtos = new ArrayList<>();
 		List<Variance> allVariance = new ArrayList<>();
@@ -885,6 +821,9 @@ public class RentServiceImpl implements RentService {
 		for (Map<String, Object> queryResult : priviousMonthlist) {
 			PaymentReportDto reportData = generatePaymentreport("" + queryResult.get("contractid"),
 					priviousMonth.getMonth() + "", priviousMonth.getYear() + "", "Raw");
+			reportData.setMonth(LocalDate.now().minusMonths(1).getMonth()+"");
+			reportData.setYear(LocalDate.now().minusMonths(1).getYear()+"");
+			reportData.setActualAmount("0");
 			alartContract.add(reportData);
 		}
 		return alartContract;

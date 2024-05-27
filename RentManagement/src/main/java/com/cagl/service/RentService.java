@@ -26,7 +26,6 @@ public interface RentService {
 	
 	ArrayList<AlertDto> getAlertContract() throws ParseException;
 
-	LinkedHashMap insertContracts();
 
 	List<varianceDto> getvariance(String contractID);
 

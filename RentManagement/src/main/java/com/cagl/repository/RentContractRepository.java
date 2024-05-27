@@ -1,9 +1,7 @@
 package com.cagl.repository;
 
-import java.nio.channels.AcceptPendingException;
 import java.util.List;
 
-import org.hibernate.type.TrueFalseType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -51,10 +49,10 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	 * @param ContractZoneStatus and e_time_zone 
 	 * @return
 	 */
-	@Query(value = "SELECT * FROM rent_contract where contract_zone='PENDING' and e_time_zone=null", nativeQuery = true)
+	@Query(value = "SELECT * FROM rent_contract where contract_zone='PENDING' and e_time_zone is null", nativeQuery = true)
 	List<RentContract> getNewPendingContract();
 
-	@Query(value = "SELECT * FROM rent_contract where contract_zone='PENDING' and e_time_zone!=null", nativeQuery = true)
+	@Query(value = "SELECT * FROM rent_contract where contract_zone='PENDING' and e_time_zone is not null", nativeQuery = true)
 	List<RentContract> getUpdatedPendingContract();
 
 	@Query(value = "Select uniqueid from rent_contract", nativeQuery = true)
@@ -69,8 +67,11 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	@Query(value = "SELECT uniqueid FROM rent_contract where agreement_activation_status ='Open' and rent_start_date<=:EflagDate and rent_end_date>=:SflagDate and contract_zone='APPROVED'", nativeQuery = true)
 	List<String> getcontractIDs(@Param("SflagDate") String SflagDate, @Param("EflagDate") String EflagDate);
 
-	@Query(value = "SELECT max(uniqueid) FROM rentmanagement.rent_contract where contract_zone='Approved'",nativeQuery = true)
+	@Query(value = "SELECT max(uniqueid) FROM rent_contract where contract_zone='Approved'",nativeQuery = true)
 	int getmaxapprovedID();
+
+	@Query(value = "SELECT max(uniqueid) FROM rent_contract",nativeQuery = true)
+	int getMaxID();
 
 	@Query(value = "SELECT * FROM rentmanagement.rent_contract where contract_zone='pending' and uniqueid<:maxID",nativeQuery = true)
 	 List<RentContract> getalertcontract(@Param("maxID")int maxID);
@@ -80,6 +81,9 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 
 	@Query(value = "SELECT count(*)  FROM variance where year=:year",nativeQuery = true)
 	int getVarianceCount(@Param("year") int year);
+
+	List<RentContract> finByAgreementActivationStatus(String string);
+
 
 	/*
 	 * @ Error->{Due to incorrect ResultSet}
