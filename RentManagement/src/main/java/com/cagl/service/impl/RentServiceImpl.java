@@ -240,7 +240,7 @@ public class RentServiceImpl implements RentService {
 							// ----Modify Variance-----{BASE ON ACTUALAMOUNT)
 							Optional<Variance> optationaVariance = varianceRepository
 									.findById(Data.getContractID() + "-" + Data.getMonth() + "-" + Data.getYear());
-							if (optationaVariance.isPresent())
+							if (optationaVariance.isPresent())//Already Exist Data Dete
 								varianceRepository.delete(optationaVariance.get());
 
 							if ((Data.getMonthRent() - Double.parseDouble(Data.getAmount())) != 0.0) {

@@ -33,7 +33,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	CustomeUserDetailService customeUserDetailService;
 
 	// Checker APIs
-	public static final String[] checkerApis = { "/makeDue", "/changeZone", "/closecontract","/transferContract" };
+	public static final String[] checkerApis = { "/makeDue", "/changeZone", "/transferContract",
+			"/ModifyPaymentReport" };
 	// Maker APIs
 	public static final String[] makersApis = { "/setsd", "/makeactual", "/setprovision", "/deleteProvision",
 			"/BulkProvisionDelete", "/insertcontract" };
@@ -42,12 +43,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			"/filterBranchIDs", "/getBranchName", "/getprovision", "/getenure", "/generatePaymentReport",
 			"/generateRawPaymentReport", "/getduereportUid", "/getduereportBid", "/getbranchids", "/getbranchdetails",
 			"/renewalDetails", "/getcontracts", "/getcontractsCID", "/getcotractBranchName", "/getallcontracts",
-			"/editcontracts", "/resolvealertContract", "/getLastContract", "/AlertContract",
-			"/countprovision","/getSdDetails" };
+			"/editcontracts", "/resolvealertContract", "/getLastContract", "/AlertContract", "/countprovision",
+			"/getSdDetails", "/closecontract" };
 	// PermitAll APi Login APi..
 	public static final String[] permitAllAPIs = { "/DownloadPaymentReport", "/login", "/checkPcontract",
-			"/ConvertJsontoExcel", "/countvariance", "/getnewpendingcontract", "/getupdatpendingcontract",
-			};
+			"/ConvertJsontoExcel", "/countvariance", "/getnewpendingcontract", "/getupdatpendingcontract" };
 
 	@Override
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {

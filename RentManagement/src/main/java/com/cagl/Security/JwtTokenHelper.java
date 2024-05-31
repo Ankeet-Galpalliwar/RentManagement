@@ -21,7 +21,7 @@ public class JwtTokenHelper {
 	@Autowired
 	UserRepository userRepository;
 
-	public static final long JWT_TOKEN_VALIDITY = 1000 * 120 * 30;
+	public static final long JWT_TOKEN_VALIDITY = 3000 * 120 * 30;
 
 	private String secret = "jwtTokenKey";
 

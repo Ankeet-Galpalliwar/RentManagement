@@ -82,7 +82,7 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	@Query(value = "SELECT count(*)  FROM variance where year=:year",nativeQuery = true)
 	int getVarianceCount(@Param("year") int year);
 
-	List<RentContract> finByAgreementActivationStatus(String string);
+	List<RentContract> findByAgreementActivationStatus(String string);
 
 
 	/*

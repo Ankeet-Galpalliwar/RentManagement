@@ -136,7 +136,7 @@ public class RentController {
 	@GetMapping("/getSdDetails")
 	public ResponseEntity<Responce> getSdDeatils() {
 		List<RentContractDto> contractDtos = new ArrayList<>();
-		BeanUtils.copyProperties(rentContractRepository.finByAgreementActivationStatus("Open"), contractDtos);
+		BeanUtils.copyProperties(rentContractRepository.findByAgreementActivationStatus("Open"), contractDtos);
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(contractDtos).error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
@@ -285,7 +285,7 @@ public class RentController {
 	 * @param contractID
 	 */
 	@GetMapping("/changeZone")
-	public int ChangeContractZone(Authentication user,@RequestParam int contractID) {
+	public int ChangeContractZone(Authentication user, @RequestParam int contractID) {
 		apirecords.save(ApiCallRecords.builder().apiname("changeZone")
 				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 				.msg(contractID + "-" + user.getName()).build());
@@ -477,9 +477,12 @@ public class RentController {
 			provisionRepository.delete(provision);
 			// -----------------------------------------
 			// ---API CALL RECORD SAVE---
-			apirecords.save(ApiCallRecords.builder().apiname("deleteProvision")
-					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-					.msg(provision.toString()).build());
+			try {
+				apirecords.save(ApiCallRecords.builder().apiname("deleteProvision")
+						.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+						.msg(contractID + " " + month + year + " -" + provision.getProvisionAmount()).build());
+			} catch (Exception e) {
+			}
 
 			/**
 			 * ---Delete Record from Payment Report--- AFTER THAT.
@@ -488,6 +491,7 @@ public class RentController {
 			 *       in @Payment_Report_Table
 			 **/
 			// ------Reset Actual & TDS Value & Variance---------
+
 			List<MakeActualDto> dto = new ArrayList<>();
 			dto.add(MakeActualDto.builder().amount("--").month(month).year(year)
 					.contractID(Integer.parseInt(contractID)).build());
@@ -767,6 +771,13 @@ public class RentController {
 	public ResponseEntity<Responce> editContracts(Authentication authentication, @RequestParam int uniqueID,
 			@RequestBody RentContractDto contractDto) {
 		RentContract rentContract = rentContractRepository.findById(uniqueID).get();
+		/**
+		 * Save API Record
+		 */
+		apirecords.save(ApiCallRecords.builder().apiname("editcontracts")
+				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+				.msg(contractDto.getUniqueID() + "/").build());
+
 		boolean flagCheck = false; // its false don't calculate Due..!
 		if (!rentContract.getRentStartDate().toString().equalsIgnoreCase(contractDto.getRentStartDate().toString())
 				|| !rentContract.getRentEndDate().toString().equalsIgnoreCase(contractDto.getRentEndDate().toString())
@@ -776,34 +787,50 @@ public class RentController {
 			 * @NOTE:->In above condition [SchedulePrimesis] field is use As a Escalated
 			 * Month for Rent_Due Calculation
 			 */
-//			List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
-//			unusedDueData.stream().forEach(due -> {
-//				dueRepository.delete(due);
-//			});
-//			flagCheck = true;// if (True) Changes done in RentDue orElse no need to change any thing
+			if (uniqueID > 10390) {// till 10390 we have old records so we can't change rent due for old contract.
+				List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
+				unusedDueData.stream().forEach(due -> {
+					dueRepository.delete(due);
+				});
+				flagCheck = true;// if (True) Changes done in RentDue orElse no need to change any thing
+			}
 		}
-		BeanUtils.copyProperties(contractDto, rentContract);
-		rentContract.setUniqueID(uniqueID);
-		rentContract.setContractZone("PENDING");
-		rentContract.setEditer(authentication.getName());
-		if (rentContract.getContractZone().equalsIgnoreCase("PENDING")) {// Its use full to Separate pending Screen
+		
+		RentContract editcontract= new  RentContract();
+		BeanUtils.copyProperties(contractDto, editcontract);
+		
+		editcontract.setUniqueID(uniqueID);
+		editcontract.setContractZone("PENDING");
+		editcontract.setEditer(authentication.getName());
+		editcontract.setMaker(rentContract.getMaker());
+		editcontract.setMTimeZone(rentContract.getMTimeZone());
+		editcontract.setChecker(rentContract.getChecker());
+		editcontract.setCTimeZone(rentContract.getCTimeZone());
+		if (rentContract.getContractZone().equalsIgnoreCase("PENDING")) {// Its use to Separate pending Screen
 			// Contract(setETimeZone)-> null value used in logic.
-			rentContract.setETimeZone(rentContract.getETimeZone());
-		} else {
-			rentContract.setETimeZone(LocalDate.now().toString());
+			editcontract.setETimeZone(rentContract.getETimeZone());
+		} else {//if approved change ETimeZone
+			editcontract.setETimeZone(LocalDate.now().toString());
 		}
-		RentContract save = rentContractRepository.save(rentContract);
+		RentContract save = rentContractRepository.save(editcontract);
 		if (save != null & flagCheck) {
 			// ---API CALL RECORD SAVE---
-			apirecords.save(ApiCallRecords.builder().apiname("modifyRentDue")
+			apirecords.save(ApiCallRecords.builder().apiname("modifyRentDue while editing contract")
 					.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 					.msg(save.getUniqueID() + "/" + save.getMonthlyRent()).build());
+			try {
+				createRentdue(Rentduecalculation.builder().branchID(save.getBranchID())
+						.escalatedMonth(Double.parseDouble(save.getSchedulePrimesis())).contractID(save.getUniqueID())
+						.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
+						.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
+						.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
+			} catch (Exception e) {
+				// TODO: handle exception
+				apirecords.save(ApiCallRecords.builder().apiname("Error Rent Due calculatation")
+						.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
+						.msg(save.getUniqueID() + "/" + save.getMonthlyRent()).build());
 
-//			createRentdue(Rentduecalculation.builder().branchID(save.getBranchID())
-//					.escalatedMonth(Double.parseDouble(save.getSchedulePrimesis())).contractID(save.getUniqueID())
-//					.escalation(save.getEscalation()).lesseeBranchType(save.getLesseeBranchType())
-//					.monthlyRent(save.getLessorRentAmount()).renewalTenure(save.getAgreementTenure())
-//					.rentEndDate(save.getRentEndDate()).rentStartDate(save.getRentStartDate()).build());
+			}
 		}
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().error(Boolean.FALSE).msg("Edit Sucessfully..!").data(contractDto).build());
@@ -968,14 +995,19 @@ public class RentController {
 	public Boolean generateRentDue() {
 		// Get all pending Due Calculation ContractIDs
 		List<RentContract> allcontract = rentContractRepository.getduemakerIDs();
+//		List<RentContract> allcontract = new ArrayList<>();
+//		allcontract.add(rentContractRepository.findById(10104).get());
 		allcontract.stream().map(e -> {
 			return Rentduecalculation.builder().branchID(e.getBranchID())
-					.escalatedMonth(Integer.parseInt(e.getSchedulePrimesis())).contractID(e.getUniqueID())
+					.escalatedMonth((int) (Double.parseDouble(e.getSchedulePrimesis()))).contractID(e.getUniqueID())
 					.escalation(e.getEscalation()).lesseeBranchType(e.getLesseeBranchType())
 					.monthlyRent(e.getMonthlyRent()).renewalTenure(e.getAgreementTenure())
 					.rentEndDate(e.getRentEndDate()).rentStartDate(e.getRentStartDate()).build();
 		}).collect(Collectors.toList()).stream().forEach(data -> {
-			System.out.println(data.getContractID() + "---");
+			List<RentDue> unusedDueData = dueRepository.getUnusedDueData(data.getContractID() + "");
+			unusedDueData.stream().forEach(due -> {
+				dueRepository.delete(due);
+			});
 			createRentdue(data);
 		});
 		return true;
