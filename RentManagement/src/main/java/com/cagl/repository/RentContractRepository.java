@@ -84,6 +84,10 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 
 	List<RentContract> findByAgreementActivationStatus(String string);
 
+	List<RentContract> findByLesseeStateAndContractZone(String state,String zone);
+	
+	List<RentContract> findByPremesisDistrictAndContractZone(String state,String zone);
+
 
 	/*
 	 * @ Error->{Due to incorrect ResultSet}

@@ -26,7 +26,15 @@ public interface provisionRepository extends JpaRepository<provision, String> {
 
 	public provision findByContractIDAndYearAndMonthAndRemark(String contractID, int year, String month, String string);
 
-	public provision findByContractIDAndYearAndMonthAndProvisiontype(String contractID, int parseInt, String month,
-			String string);
+	public List<provision> findByContractIDAndYearAndMonthAndProvisiontypeAndPaymentFlag(String contractID,
+			int parseInt, String month, String type, String flag);
 
+//	public List<provision> findByContractIDAndYearAndMonthAndProvisiontype(String contractID, int parseInt,
+//			String month, String type);
+
+	@Query(value = "SELECT provisionid FROM provision where provisionid like %:like%", nativeQuery = true)
+	List<String> getSimilarIDs(@Param("like") String like);
+
+	@Query(value = "select distinct payment_flag from rentmanagement.provision where provisionid like %:like% and provisiontype='Reversed'", nativeQuery = true)
+	String getReversedProvisionPaymentFlag(@Param("like") String like);
 }

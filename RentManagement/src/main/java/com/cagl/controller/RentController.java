@@ -136,7 +136,11 @@ public class RentController {
 	@GetMapping("/getSdDetails")
 	public ResponseEntity<Responce> getSdDeatils() {
 		List<RentContractDto> contractDtos = new ArrayList<>();
-		BeanUtils.copyProperties(rentContractRepository.findByAgreementActivationStatus("Open"), contractDtos);
+		rentContractRepository.findByAgreementActivationStatus("Open").stream().forEach(e -> {
+			RentContractDto contrcat = new RentContractDto();
+			BeanUtils.copyProperties(e, contrcat);
+			contractDtos.add(contrcat);
+		});
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(contractDtos).error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
@@ -144,7 +148,7 @@ public class RentController {
 	@GetMapping("/getLastContract")
 	public ResponseEntity<Responce> getLastContract() {
 		RentContractDto Contract = new RentContractDto();
-		BeanUtils.copyProperties(rentContractRepository.findById(rentContractRepository.getMaxID()), Contract);
+		BeanUtils.copyProperties(rentContractRepository.findById(rentContractRepository.getMaxID()).get(), Contract);
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().data(Contract).error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
@@ -159,11 +163,13 @@ public class RentController {
 				.error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
 
+	// API NOT IN USE.
 	@GetMapping("/countprovision")
 	public int getProvisionCount(@RequestParam int year) {
 		return rentContractRepository.getProvisionCount(year);
 	}
 
+	// API NOT IN USE.
 	@GetMapping("/countvariance")
 	public int getVarianceCount(@RequestParam int year) {
 		return rentContractRepository.getVarianceCount(year);
@@ -271,15 +277,6 @@ public class RentController {
 		return 0;
 	}
 
-//	@PostMapping("changestatus")
-//	public ResponseEntity<Responce> changeContract(Authentication user, @RequestParam String branchID) {
-//		apirecords.save(ApiCallRecords.builder().apiname("closecontract")
-//				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-//				.msg(branchID + "-" + user.getName()).build());
-//		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().build());
-//
-//	}
-
 	/**
 	 * @APi use to approved pending contracts
 	 * @param contractID
@@ -312,6 +309,7 @@ public class RentController {
 				.body(Responce.builder().data(null).error(Boolean.TRUE).msg("IFSC Info Not Present in Master").build());
 	}
 
+	// Drop Down API
 	@GetMapping("/getstate")
 	public ResponseEntity<Responce> getState() {
 		return ResponseEntity.status(HttpStatus.OK)
@@ -321,6 +319,7 @@ public class RentController {
 						.error(Boolean.FALSE).msg("Get All State").build());
 	}
 
+	// Drop Down API
 	@GetMapping("/getdistrict")
 	public ResponseEntity<Responce> getDistrictBaseonState(@RequestParam String state) {
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder()
@@ -328,6 +327,7 @@ public class RentController {
 				.error(Boolean.FALSE).msg("Get District").build());
 	}
 
+	// Drop Down API
 	@GetMapping("/filterBranchIDs")
 	public ResponseEntity<Responce> getBranchIdsforFilter() {
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder()
@@ -343,6 +343,7 @@ public class RentController {
 						.error(Boolean.FALSE).msg("All Brannches").build());
 	}
 
+	// Drop Down API
 	@GetMapping("/getAreaName")
 	public ResponseEntity<Responce> getAreaName() {
 		return ResponseEntity.status(HttpStatus.OK)
@@ -369,16 +370,15 @@ public class RentController {
 
 	/**
 	 * @param sdrecord
-	 * @throws ParseException
 	 */
 	@PostMapping("/setsd")
-	public ResponseEntity<Responce> getSd(Authentication authentication, @RequestBody SDRecoardDto sdrecord)
+	public ResponseEntity<Responce> MakeSd(Authentication authentication, @RequestBody SDRecoardDto sdrecord)
 			throws ParseException {
-		Optional<provision> optionalProvision = provisionRepository
-				.findById(sdrecord.getContractID() + "-" + sdrecord.getMonth() + "-" + sdrecord.getYear());
-		if (optionalProvision.isPresent())
-			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(optionalProvision.get())
-					.error(Boolean.TRUE).msg(" Cant't make SD provision Already Exist").build());
+//		Optional<provision> optionalProvision = provisionRepository
+//				.findById(sdrecord.getContractID() + "-" + sdrecord.getMonth() + "-" + sdrecord.getYear());
+//		if (optionalProvision.isPresent())
+//			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(optionalProvision.get())
+//					.error(Boolean.TRUE).msg(" Cant't make SD provision Already Exist").build());
 		RentContract rentContract = rentContractRepository.findById(sdrecord.getContractID()).get();
 		// If month Year not match Send conflict Error in ResponSe
 		if (LocalDate.now().isAfter(rentContract.getRentEndDate())) {
@@ -405,14 +405,14 @@ public class RentController {
 			@RequestBody List<MakeActualDto> ActualDto) {
 		if (Status.equalsIgnoreCase("CONFIRM")) {
 
-//			List<PaymentReport> Paymentdata = paymentReportRepository.findByMonthAndYear(ActualDto.get(0).getMonth(), ActualDto.get(0).getYear()+"");
+//			List<PaymentReport> Paymentdata = paymentReportRepository.findByMonthAndYear(ActualDto.get(0).getMonth(),
+//					ActualDto.get(0).getYear() + "");
 //			Paymentdata.stream().forEach(e->{
 //				ConfirmPaymentReport.builder().ActualAmount(e.getActualAmount()).branchID(e.getBranchID()).contractID(e.getContractID()+"").due(e.getDue()).Gross(e.getGross()).GST(e.getGST()).ID(null).month(e.getMonth()).year(e.getYear()).
-//				
 //				confirmPaymentRepository.save(null);			
 //			});
+			return null;
 		}
-
 		Map<String, String> responce = rentService.makeactual(Status, ActualDto);
 		// ---API CALL RECORD SAVE---
 		if (!Status.equalsIgnoreCase("CONFIRM")) {
@@ -424,7 +424,7 @@ public class RentController {
 				// --> IF MSG Field Large.
 				apirecords.save(ApiCallRecords.builder().apiname("makeactual")
 						.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-						.msg(ActualDto.stream().map(null).toString()).build());
+						.msg("NO_Recoards_Found..!").build());
 			}
 		}
 		return ResponseEntity.status(HttpStatus.OK)
@@ -437,23 +437,32 @@ public class RentController {
 	@PostMapping("/setprovision")
 	public ResponseEntity<Responce> addprovison(Authentication authentication, @RequestParam String provisionType,
 			@RequestBody provisionDto provisionDto) throws ParseException {
-
-		Optional<provision> optionalProvision = provisionRepository
-				.findById(provisionDto.getContractID() + "-" + provisionDto.getMonth() + "-" + provisionDto.getYear());
-		if (optionalProvision.isPresent())
-			return ResponseEntity.status(HttpStatus.CONFLICT).body(Responce.builder().data(optionalProvision.get())
-					.error(Boolean.TRUE).msg("provision Already Exist").build());
-
+		/**
+		 * As per new Requirement(IN PROD) Same month multiple provision required(for
+		 * unique (currentDate We are using at end of primary_Key)
+		 * 
+		 * @BUT WE can't make 2 provision reversed with different
+		 *      payment_flag(PAID_or_NOT PAID)
+		 */
+		if (provisionType.equalsIgnoreCase("REVERSED")) {
+			String ExistPaymentFlag = provisionRepository.getReversedProvisionPaymentFlag(
+					provisionDto.getContractID() + "-" + provisionDto.getMonth() + "-" + provisionDto.getYear());
+			if (ExistPaymentFlag != null & !provisionDto.getPaymentFlag().equalsIgnoreCase(ExistPaymentFlag)) {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+						.body(Responce.builder().data("PAID & NOT PAID CONFLICT").error(Boolean.TRUE)
+								.msg("SAME_MONTH_YOU CANT MAKE BOTH").build());
+			}
+		}
 		provisionDto.setMakerID(authentication.getName());
 		provisionDto.setMakerTimeZone(LocalDate.now().toString());
-		provisionDto pDto = rentService.addprovision(provisionType, provisionDto);
+		rentService.addprovision(provisionType, provisionDto);
 		// ---API CALL RECORD SAVE---
 		apirecords.save(ApiCallRecords.builder().apiname("setprovision")
 				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
 				.msg(provisionDto.getContractID() + "/" + provisionDto.getProvisionAmount()).build());
 
 		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(pDto).error(Boolean.FALSE).msg("provision Added").build());
+				.body(Responce.builder().data("provision Done").error(Boolean.FALSE).msg("provision Added").build());
 	}
 
 	/**
@@ -504,7 +513,10 @@ public class RentController {
 		}
 	}
 
-	@PostMapping("/BulkProvisionDelete")
+	/**
+	 * API NOT USED.
+	 */
+//	@PostMapping("/BulkProvisionDelete")
 	public ResponseEntity<Responce> bulkpProvisionDelete(
 			@RequestBody List<BulkProvisionDeletion> bulkProvisionDeletion) {
 		// ---API CALL RECORD SAVE---
@@ -518,6 +530,7 @@ public class RentController {
 				}).collect(Collectors.toList())).msg("Bulk provision Deleted...!").error(Boolean.FALSE).build());
 	}
 
+	// NOT IN USE
 	@PostMapping("/getenure")
 	public ResponseEntity<List<Long>> getTenure(@RequestBody TenureDto data) {
 		long tenure = ChronoUnit.MONTHS.between(data.getStartDate(), data.getEndDate()) + 1;
@@ -795,10 +808,10 @@ public class RentController {
 				flagCheck = true;// if (True) Changes done in RentDue orElse no need to change any thing
 			}
 		}
-		
-		RentContract editcontract= new  RentContract();
+
+		RentContract editcontract = new RentContract();
 		BeanUtils.copyProperties(contractDto, editcontract);
-		
+
 		editcontract.setUniqueID(uniqueID);
 		editcontract.setContractZone("PENDING");
 		editcontract.setEditer(authentication.getName());
@@ -809,7 +822,7 @@ public class RentController {
 		if (rentContract.getContractZone().equalsIgnoreCase("PENDING")) {// Its use to Separate pending Screen
 			// Contract(setETimeZone)-> null value used in logic.
 			editcontract.setETimeZone(rentContract.getETimeZone());
-		} else {//if approved change ETimeZone
+		} else {// if approved change ETimeZone
 			editcontract.setETimeZone(LocalDate.now().toString());
 		}
 		RentContract save = rentContractRepository.save(editcontract);
@@ -945,26 +958,50 @@ public class RentController {
 	 * @param district
 	 * @return
 	 */
-	@GetMapping("/getallcontracts")
+	@GetMapping("/getAllContractsByDistrict")
 	public ResponseEntity<Responce> getAllContracts(@RequestParam String district) {
-		List<RentContractDto> contractInfos = new ArrayList<>();
-		List<RentContract> allContractDetalis = rentContractRepository.findAll();
+		List<RentContract> allContractDetalis = rentContractRepository.findByPremesisDistrictAndContractZone(district,
+				"Approved");
 		if (!allContractDetalis.isEmpty()) {
-			allContractDetalis.stream().filter(data -> !data.getContractZone().equalsIgnoreCase("PENDING"))
-					.filter(data -> data.getPremesisDistrict().trim().equalsIgnoreCase(district.trim()))
-					.forEach(contractInfo -> {
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
+					.msg("All Contracts Details fetch..!").data(allContractDetalis.stream().map(contractInfo -> {
 
 						RentContractDto contractDto = new RentContractDto();
 						BeanUtils.copyProperties(contractInfo, contractDto);
-						contractInfos.add(contractDto);
-					});
-			return ResponseEntity.status(HttpStatus.OK)
-					.body(Responce.builder().error(Boolean.FALSE).msg("All Contracts Details fetch..!")
-							.data(contractInfos.stream().sorted(Comparator.comparing(RentContractDto::getUniqueID)))
-							.build());
+						return contractDto;
+					}).sorted(Comparator.comparing(RentContractDto::getUniqueID)).collect(Collectors.toList()))
+					.build());
 		}
 		return ResponseEntity.status(HttpStatus.OK)
 				.body(Responce.builder().error(Boolean.TRUE).msg("Contracts Data Not present..!").data(null).build());
+	}
+
+	@GetMapping("/getAllContractByState")
+	public ResponseEntity<Responce> getallContractBaseonState(@RequestParam String State) {
+		List<RentContract> contract = rentContractRepository.findByLesseeStateAndContractZone(State, "Approved");
+		if (contract != null) {
+			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
+					.msg("All Contracts Details fetch..!").data(contract.stream().map(e -> {
+						RentContractDto dto = new RentContractDto();
+						BeanUtils.copyProperties(e, dto);
+						return dto;
+					}).collect(Collectors.toList())).build());
+		} else {
+			return ResponseEntity.status(HttpStatus.OK).body(
+					Responce.builder().error(Boolean.TRUE).msg("Contracts Data Not present..!").data(null).build());
+		}
+	}
+
+	@GetMapping("/getOpenContract")
+	public ResponseEntity<Responce> getOpenContract() {
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().error(Boolean.FALSE).msg("All Contracts Details fetch..!")
+						.data(rentContractRepository.findByAgreementActivationStatus("Open").stream().map(e -> {
+							RentContractDto dto = new RentContractDto();
+							BeanUtils.copyProperties(e, dto);
+							return dto;
+						}).collect(Collectors.toList())).build());
+
 	}
 
 	// =======================GENERATE FLAG DATE ===========================

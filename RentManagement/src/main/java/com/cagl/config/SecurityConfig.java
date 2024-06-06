@@ -37,17 +37,18 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			"/ModifyPaymentReport" };
 	// Maker APIs
 	public static final String[] makersApis = { "/setsd", "/makeactual", "/setprovision", "/deleteProvision",
-			"/BulkProvisionDelete", "/insertcontract" };
+			"/insertcontract" };// BulkProvisionDelete,
 	// Checker-maker APIs
 	public static final String[] CMApis = { "/getvariance", "/ifscinfo", "/getstate", "/getdistrict",
 			"/filterBranchIDs", "/getBranchName", "/getprovision", "/getenure", "/generatePaymentReport",
 			"/generateRawPaymentReport", "/getduereportUid", "/getduereportBid", "/getbranchids", "/getbranchdetails",
-			"/renewalDetails", "/getcontracts", "/getcontractsCID", "/getcotractBranchName", "/getallcontracts",
-			"/editcontracts", "/resolvealertContract", "/getLastContract", "/AlertContract", "/countprovision",
-			"/getSdDetails", "/closecontract" };
+			"/renewalDetails", "/getcontracts", "/getcontractsCID", "/getcotractBranchName",
+			"/editcontracts", "/resolvealertContract", "/AlertContract", "/countprovision", "/getSdDetails",
+			"/closecontract" };
 	// PermitAll APi Login APi..
 	public static final String[] permitAllAPIs = { "/DownloadPaymentReport", "/login", "/checkPcontract",
-			"/ConvertJsontoExcel", "/countvariance", "/getnewpendingcontract", "/getupdatpendingcontract" };
+			"/ConvertJsontoExcel", "/countvariance", "/getnewpendingcontract", "/getupdatpendingcontract",
+			"/getLastContract" ,"/getAllContractsByDistrict","/getAllContractByState","/getOpenContract"};
 
 	@Override
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {

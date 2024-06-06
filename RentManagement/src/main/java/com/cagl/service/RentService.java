@@ -17,7 +17,7 @@ public interface RentService {
 
 	Map<String, String> makeactual(String Status,List<MakeActualDto> actualDto);
 
-	provisionDto addprovision(String provisionType, provisionDto provisionDto);
+	void addprovision(String provisionType, provisionDto provisionDto);
 
 	Responce getprovision(String flag, String year);
 
