@@ -52,6 +52,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.cagl.dto.BranchDto;
 import com.cagl.dto.BulkProvisionDeletion;
+import com.cagl.dto.DashBoardInfo;
 import com.cagl.dto.MakeActualDto;
 import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RecipiantDto;
@@ -133,7 +134,6 @@ public class RentController {
 				.error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
 
-	
 	/**
 	 * @Note DocumentType field use for Extended Contract.
 	 */
@@ -147,7 +147,7 @@ public class RentController {
 
 		RentContract rentContract = rentContractRepository.findById(contractID).get();
 		String ExistingData = rentContract.getDocumentType();
-		rentContract.setDocumentType(ExistingData +"{Contract Extend(" + rentEndDate + ")} ");
+		rentContract.setDocumentType(ExistingData + "{Contract Extend(" + rentEndDate + ")} ");
 		rentContractRepository.save(rentContract);
 		return "{Contract Extend(" + rentEndDate + ")";
 	}
@@ -186,6 +186,11 @@ public class RentController {
 	@GetMapping("/countprovision")
 	public int getProvisionCount(@RequestParam int year) {
 		return rentContractRepository.getProvisionCount(year);
+	}
+
+	@GetMapping("/DashBoardDetails")
+	public DashBoardInfo getProvisionCount() {
+		return rentService.getDashBoardDetails();
 	}
 
 	// API NOT IN USE.
@@ -566,6 +571,7 @@ public class RentController {
 			return rentduedto;
 		})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
+
 	/**
 	 * @Use While adding new Contract(DropDown)
 	 * @param BranchID
@@ -636,18 +642,16 @@ public class RentController {
 //					.msg("Branch Data Not Exist...!").error(Boolean.TRUE).build());
 //		}
 	}
-	
-	
+
 	/**
-	 * @DropDown API 
+	 * @DropDown API
 	 * @param branchName
 	 * @return BranchIds Base on Branch Name.
 	 */
 	@GetMapping("/getBranchsByBranchName")
-	public  List<String> getbranchID(@RequestParam String branchName){
+	public List<String> getbranchID(@RequestParam String branchName) {
 		return rentContractRepository.getbranchIDsByBranchName(branchName);
 	}
-	
 
 	@GetMapping("/renewalDetails")
 	public ResponseEntity<Responce> getinfo(@RequestParam String branchID) {
@@ -771,7 +775,9 @@ public class RentController {
 			 * @NOTE:->In above condition [SchedulePrimesis] field is use As a Escalated
 			 * Month for Rent_Due Calculation
 			 */
-			if (uniqueID > 10390 || rentContract.getDocumentType()!=null) {// till 10390 we have old records so we can't change rent due for old contract.
+			if (uniqueID > 10390 || rentContract.getDocumentType() != null) {// till 10390 we have old records so we
+																				// can't change rent due for old
+																				// contract.
 				List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
 				unusedDueData.stream().forEach(due -> {
 					dueRepository.delete(due);

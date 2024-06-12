@@ -2,6 +2,7 @@ package com.cagl.service.impl;
 
 import java.text.ParseException;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import com.cagl.controller.RentController;
 import com.cagl.dto.AlertDto;
+import com.cagl.dto.DashBoardInfo;
 import com.cagl.dto.MakeActualDto;
 import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.RentContractDto;
@@ -332,10 +334,11 @@ public class RentServiceImpl implements RentService {
 		/**
 		 * Additional Requirement
 		 */
-		
-		 List<provision> ReversedprovisionData = provisionRepository.findByContractIDAndYearAndMonthAndProvisiontypeAndPaymentFlag(contractID,
-				Integer.parseInt(year), month, "REVERSED","PAID");
-		if (ReversedprovisionData == null& ReversedprovisionData.isEmpty()) {
+
+		List<provision> ReversedprovisionData = provisionRepository
+				.findByContractIDAndYearAndMonthAndProvisiontypeAndPaymentFlag(contractID, Integer.parseInt(year),
+						month, "REVERSED", "PAID");
+		if (ReversedprovisionData == null & ReversedprovisionData.isEmpty()) {
 			// ............................................................
 			boolean flag = true;
 			try {
@@ -357,8 +360,8 @@ public class RentServiceImpl implements RentService {
 							.ActualAmount(rawgeneratereport.getActualAmount())
 							.tds(Double.parseDouble(rawgeneratereport.getReporttds()))
 							.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
-		
-		} else{
+
+		} else {
 			// ..................................
 			PaymentReportDto generatereport = generatePaymentreport(contractID, month, year, "show");
 			boolean flag = true;
@@ -369,7 +372,7 @@ public class RentServiceImpl implements RentService {
 			} catch (Exception e2) {
 				// TODO: handle exception
 			}
-              // Here we are saving(Generated Payment Report) Data for audit purpose.
+			// Here we are saving(Generated Payment Report) Data for audit purpose.
 			paymentReportRepository.save(PaymentReport.builder().Redflag(flag)
 					.branchID(generatereport.getInfo().getBranchID())
 					.contractInfo(rentContractRepository.findById(Integer.parseInt(contractID)).get())
@@ -380,7 +383,7 @@ public class RentServiceImpl implements RentService {
 					.ActualAmount(generatereport.getActualAmount())
 					.tds(Double.parseDouble(generatereport.getReporttds()))
 					.GST(Double.parseDouble(generatereport.getGstamt())).year(year).build());
-		} 
+		}
 	}
 
 	@Override
@@ -551,7 +554,7 @@ public class RentServiceImpl implements RentService {
 			DueValue += MonthRent;
 			// ----------initiate Variance on DueValue---------
 
-			if (reportType.equalsIgnoreCase("Raw")) { //Raw Means reversed not in middle
+			if (reportType.equalsIgnoreCase("Raw")) { // Raw Means reversed not in middle
 
 				String overAllVariance = varianceRepository.getoverallvariance(contractID, flagDate + "");
 				if (overAllVariance != null) {// & !overAllVariance.isEmpty()
@@ -763,6 +766,27 @@ public class RentServiceImpl implements RentService {
 			alartContract.add(reportData);
 		}
 		return alartContract;
+	}
+
+	@Override
+	public DashBoardInfo getDashBoardDetails() {
+		LocalDate now = LocalDate.now();
+		LocalDate pre = now.minusMonths(1);
+
+		return DashBoardInfo.builder().grossCurrentMonth(now.getMonth().toString())
+				.grossCurrentMonthSum(
+						paymentReportRepository.getGrossSum(now.getMonth().toString(), now.getYear()) + "")
+				.grossPreviousMonth(pre.getMonth().toString())
+				.grossPreviousMonthSum(
+						paymentReportRepository.getGrossSum(pre.getMonth().toString(), pre.getYear()) + "")
+				.provisionCurrentMonth(now.getMonth().toString())
+				.provisionCurrentMonthSum(
+						provisionRepository.getProvisionSum(now.getMonth().toString(), now.getYear(), "MAKE") + "")
+				.provisionPreviousMonth(pre.getMonth().toString())
+				.provisionPreviousMonthSum(
+						provisionRepository.getProvisionSum(pre.getMonth().toString(), pre.getYear(), "MAKE") + "")
+				.build();
+
 	}
 
 }

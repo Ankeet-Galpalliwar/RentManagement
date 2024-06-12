@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cagl.dto.AlertDto;
+import com.cagl.dto.DashBoardInfo;
 import com.cagl.dto.MakeActualDto;
 import com.cagl.dto.PaymentReportDto;
 import com.cagl.dto.Responce;
@@ -30,5 +31,7 @@ public interface RentService {
 	List<varianceDto> getvariance(String contractID);
 
 	List<PaymentReportDto> getResolvedAlertContract() throws Exception;
+
+	DashBoardInfo getDashBoardDetails();
 
 }
