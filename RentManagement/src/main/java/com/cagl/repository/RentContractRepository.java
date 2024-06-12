@@ -27,10 +27,13 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	@Query(value = "SELECT  distinct branchid  FROM rent_contract", nativeQuery = true)
 	List<String> getbranchIds();
 
-	@Query(value = "SELECT  branchid FROM rent_contract where lessee_branch_type LIKE %:uu%", nativeQuery = true)
+	@Query(value = "SELECT distinct branchid FROM rent_contract where lessee_branch_type LIKE %:uu%", nativeQuery = true)
 	List<String> getbranchIDs(@Param("uu") String uu);
 
-	@Query(value = "SELECT premesis_district FROM rent_contract where lessee_state LIKE %:state%", nativeQuery = true)
+	@Query(value = "SELECT distinct branchid FROM rent_contract where lessee_branch_name =:branchName", nativeQuery = true)
+	List<String> getbranchIDsByBranchName(@Param("branchName") String branchName);
+	
+	@Query(value = "SELECT distinct premesis_district FROM rent_contract where lessee_state LIKE %:state%", nativeQuery = true)
 	List<String> getdistrict(@Param("state") String state);
 
 	List<RentContract> findByBranchID(String branchID);

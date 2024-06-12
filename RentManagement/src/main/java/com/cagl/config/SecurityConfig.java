@@ -37,7 +37,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			"/ModifyPaymentReport" };
 	// Maker APIs
 	public static final String[] makersApis = { "/setsd", "/makeactual", "/setprovision", "/deleteProvision",
-			"/insertcontract" };// BulkProvisionDelete,
+			"/insertcontract","/ExtendContract" };// BulkProvisionDelete,
 	// Checker-maker APIs
 	public static final String[] CMApis = { "/getvariance", "/ifscinfo", "/getstate", "/getdistrict",
 			"/filterBranchIDs", "/getBranchName", "/getprovision", "/getenure", "/generatePaymentReport",
@@ -48,7 +48,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	// PermitAll APi Login APi..
 	public static final String[] permitAllAPIs = { "/DownloadPaymentReport", "/login", "/checkPcontract",
 			"/ConvertJsontoExcel", "/countvariance", "/getnewpendingcontract", "/getupdatpendingcontract",
-			"/getLastContract" ,"/getAllContractsByDistrict","/getAllContractByState","/getOpenContract"};
+			"/getLastContract" ,"/getAllContractsByDistrict","/getAllContractByState","/getOpenContract","/getBranchsByBranchName"
+			};
 
 	@Override
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {

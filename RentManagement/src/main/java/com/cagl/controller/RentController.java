@@ -133,6 +133,10 @@ public class RentController {
 				.error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
 
+	
+	/**
+	 * @Note DocumentType field use for Extended Contract.
+	 */
 	@GetMapping("/ExtendContract")
 	public String getAllExtendedContraact(Authentication user, @RequestParam int contractID,
 			@RequestParam String rentEndDate) {
@@ -142,9 +146,8 @@ public class RentController {
 				.msg(contractID + "-" + user.getName()).build());
 
 		RentContract rentContract = rentContractRepository.findById(contractID).get();
-		String ExistingRemark = rentContract.getRemarks();
-		ExistingRemark += "{Contract Extend(" + rentEndDate + ")";
-		rentContract.setRemarks(ExistingRemark);
+		String ExistingData = rentContract.getDocumentType();
+		rentContract.setDocumentType(ExistingData +"{Contract Extend(" + rentEndDate + ")} ");
 		rentContractRepository.save(rentContract);
 		return "{Contract Extend(" + rentEndDate + ")";
 	}
@@ -563,7 +566,11 @@ public class RentController {
 			return rentduedto;
 		})).error(Boolean.FALSE).msg("Due Report Fetch").build());
 	}
-
+	/**
+	 * @Use While adding new Contract(DropDown)
+	 * @param BranchID
+	 * @return
+	 */
 	@GetMapping("/getbranchids")
 	public List<String> getBranchIDs(@RequestParam String type) {
 		if (type.toUpperCase().startsWith("RF")) {
@@ -575,6 +582,11 @@ public class RentController {
 		}
 	}
 
+	/**
+	 * @Use While adding new Contract
+	 * @param BranchID
+	 * @return
+	 */
 	@GetMapping("/getbranchdetails")
 	public ResponseEntity<Responce> getBranchDetails(@RequestParam String BranchID) {
 
@@ -624,11 +636,23 @@ public class RentController {
 //					.msg("Branch Data Not Exist...!").error(Boolean.TRUE).build());
 //		}
 	}
+	
+	
+	/**
+	 * @DropDown API 
+	 * @param branchName
+	 * @return BranchIds Base on Branch Name.
+	 */
+	@GetMapping("/getBranchsByBranchName")
+	public  List<String> getbranchID(@RequestParam String branchName){
+		return rentContractRepository.getbranchIDsByBranchName(branchName);
+	}
+	
 
 	@GetMapping("/renewalDetails")
-	public ResponseEntity<Responce> getinfo(@RequestParam String BranchName) {
+	public ResponseEntity<Responce> getinfo(@RequestParam String branchID) {
 
-		List<RentContract> contractData = rentContractRepository.findByLesseeBranchName(BranchName);
+		List<RentContract> contractData = rentContractRepository.findByBranchID(branchID);
 		if (contractData != null)
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(Responce.builder().error(Boolean.FALSE)
@@ -747,7 +771,7 @@ public class RentController {
 			 * @NOTE:->In above condition [SchedulePrimesis] field is use As a Escalated
 			 * Month for Rent_Due Calculation
 			 */
-			if (uniqueID > 10390) {// till 10390 we have old records so we can't change rent due for old contract.
+			if (uniqueID > 10390 || rentContract.getDocumentType()!=null) {// till 10390 we have old records so we can't change rent due for old contract.
 				List<RentDue> unusedDueData = dueRepository.getUnusedDueData(uniqueID + "");
 				unusedDueData.stream().forEach(due -> {
 					dueRepository.delete(due);
@@ -766,6 +790,7 @@ public class RentController {
 		editcontract.setMTimeZone(rentContract.getMTimeZone());
 		editcontract.setChecker(rentContract.getChecker());
 		editcontract.setCTimeZone(rentContract.getCTimeZone());
+		editcontract.setDocumentType(rentContract.getDocumentType());
 		if (rentContract.getContractZone().equalsIgnoreCase("PENDING")) {// Its use to Separate pending Screen
 			// Contract(setETimeZone)-> null value used in logic.
 			editcontract.setETimeZone(rentContract.getETimeZone());
