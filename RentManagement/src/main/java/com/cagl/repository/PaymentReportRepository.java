@@ -10,16 +10,12 @@ import org.springframework.stereotype.Repository;
 import com.cagl.entity.PaymentReport;
 
 @Repository
-public interface PaymentReportRepository extends JpaRepository<PaymentReport, String>{
+public interface PaymentReportRepository extends JpaRepository<PaymentReport, String> {
 
 	List<PaymentReport> findByMonthAndYear(String string, String string2);
 	
-	
-	@Query(value = "SELECT sum(gross) FROM rentmanagement.payment_report where month=:m and year=:y")
-	int getGrossSum(@Param("m") String m,@Param("y") int y);
-	
-	
-	
-	
+
+	@Query(value = "SELECT sum(gross) FROM rentmanagement.payment_report where month=:m and year=:y", nativeQuery = true)
+	int getGrossSum(@Param("m") String m, @Param("y") int y);
 
 }

@@ -164,14 +164,6 @@ public class RentController {
 				.body(Responce.builder().data(contractDtos).error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
 
-	@GetMapping("/getLastContract")
-	public ResponseEntity<Responce> getLastContract() {
-		RentContractDto Contract = new RentContractDto();
-		BeanUtils.copyProperties(rentContractRepository.findById(rentContractRepository.getMaxID()).get(), Contract);
-		return ResponseEntity.status(HttpStatus.OK)
-				.body(Responce.builder().data(Contract).error(Boolean.FALSE).msg("Alerts Contracts").build());
-	}
-
 	/**
 	 * @return resolved contract to make actual
 	 * @throws Exception
@@ -188,6 +180,24 @@ public class RentController {
 		return rentContractRepository.getProvisionCount(year);
 	}
 
+	/**
+	 * DashBoard API
+	 * 
+	 * @return
+	 */
+	@GetMapping("/getLastContract")
+	public ResponseEntity<Responce> getLastContract() {
+		RentContractDto Contract = new RentContractDto();
+		BeanUtils.copyProperties(rentContractRepository.findById(rentContractRepository.getMaxID()).get(), Contract);
+		return ResponseEntity.status(HttpStatus.OK)
+				.body(Responce.builder().data(Contract).error(Boolean.FALSE).msg("Alerts Contracts").build());
+	}
+
+	/**
+	 * DashBoard API
+	 * 
+	 * @return
+	 */
 	@GetMapping("/DashBoardDetails")
 	public DashBoardInfo getProvisionCount() {
 		return rentService.getDashBoardDetails();
@@ -645,18 +655,24 @@ public class RentController {
 
 	/**
 	 * @DropDown API
-	 * @param branchName
+	 * @param branchName & branch Type 
 	 * @return BranchIds Base on Branch Name.
 	 */
-	@GetMapping("/getBranchsByBranchName")
-	public List<String> getbranchID(@RequestParam String branchName) {
-		return rentContractRepository.getbranchIDsByBranchName(branchName);
+	@GetMapping("/getBranchsByBranchName")//2
+	public List<String> getbranchID(@RequestParam String branchName,@RequestParam String branchtype) {
+		return rentContractRepository.getbranchIDsByBranchName(branchName,branchtype);
+	}
+	
+	@GetMapping("/getBranchType")//1
+	public List<String> getbranchType(@RequestParam String branchName){
+		return rentContractRepository.getBranchTypeBaseOnBranchName(branchName);
+		
 	}
 
 	@GetMapping("/renewalDetails")
-	public ResponseEntity<Responce> getinfo(@RequestParam String branchID) {
+	public ResponseEntity<Responce> getinfo(@RequestParam String branchID,@RequestParam String branchtype) {
 
-		List<RentContract> contractData = rentContractRepository.findByBranchID(branchID);
+		List<RentContract> contractData = rentContractRepository.findByBranchIDAndLesseeBranchType(branchID,branchtype);
 		if (contractData != null)
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(Responce.builder().error(Boolean.FALSE)
@@ -956,10 +972,13 @@ public class RentController {
 
 	@GetMapping("/getAllContractByState")
 	public ResponseEntity<Responce> getallContractBaseonState(@RequestParam String State) {
-		List<RentContract> contract = rentContractRepository.findByLesseeStateAndContractZone(State, "Approved");
+		List<RentContract> contract = rentContractRepository.findByLesseeState(State);
 		if (contract != null) {
 			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
-					.msg("All Contracts Details fetch..!").data(contract.stream().map(e -> {
+					.msg("All Contracts Details fetch..!")
+					.data(contract.stream().filter(e->
+				         e.getContractZone().equalsIgnoreCase("Approved")
+					).map(e -> {
 						RentContractDto dto = new RentContractDto();
 						BeanUtils.copyProperties(e, dto);
 						return dto;

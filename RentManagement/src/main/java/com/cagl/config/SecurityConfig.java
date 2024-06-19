@@ -33,23 +33,22 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	CustomeUserDetailService customeUserDetailService;
 
 	// Checker APIs
-	public static final String[] checkerApis = { "/makeDue", "/changeZone", "/transferContract",
-			"/ModifyPaymentReport" };
+	public static final String[] checkerApis = { "/makeDue", "/changeZone",
+			"/ModifyPaymentReport", "/transferContract" };
 	// Maker APIs
 	public static final String[] makersApis = { "/setsd", "/makeactual", "/setprovision", "/deleteProvision",
-			"/insertcontract","/ExtendContract" };// BulkProvisionDelete,
+			"/insertcontract", "/ExtendContract" };// BulkProvisionDelete,
 	// Checker-maker APIs
 	public static final String[] CMApis = { "/getvariance", "/ifscinfo", "/getstate", "/getdistrict",
 			"/filterBranchIDs", "/getBranchName", "/getprovision", "/getenure", "/generatePaymentReport",
 			"/generateRawPaymentReport", "/getduereportUid", "/getduereportBid", "/getbranchids", "/getbranchdetails",
-			"/renewalDetails", "/getcontracts", "/getcontractsCID", "/getcotractBranchName",
-			"/editcontracts", "/resolvealertContract", "/AlertContract", "/countprovision", "/getSdDetails",
-			"/closecontract" };
+			"/renewalDetails", "/getcontracts", "/getcontractsCID", "/getcotractBranchName", "/editcontracts",
+			"/resolvealertContract", "/AlertContract", "/countprovision", "/getSdDetails", "/closecontract" };
 	// PermitAll APi Login APi..
 	public static final String[] permitAllAPIs = { "/DownloadPaymentReport", "/login", "/checkPcontract",
 			"/ConvertJsontoExcel", "/countvariance", "/getnewpendingcontract", "/getupdatpendingcontract",
-			"/getLastContract" ,"/getAllContractsByDistrict","/getAllContractByState","/getOpenContract","/getBranchsByBranchName"
-			};
+			"/getLastContract", "/getAllContractsByDistrict", "/getAllContractByState", "/getOpenContract",
+			"/getBranchsByBranchName", "/DashBoardDetails" ,"/getBranchType"};
 
 	@Override
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {

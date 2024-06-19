@@ -772,6 +772,9 @@ public class RentServiceImpl implements RentService {
 	public DashBoardInfo getDashBoardDetails() {
 		LocalDate now = LocalDate.now();
 		LocalDate pre = now.minusMonths(1);
+		System.out.println("11111111111");
+		String grossSum = provisionRepository.getProvisionSum(now.getMonth().toString(), now.getYear(), "MAKE");
+		System.out.println("11111111111"+grossSum);
 
 		return DashBoardInfo.builder().grossCurrentMonth(now.getMonth().toString())
 				.grossCurrentMonthSum(
