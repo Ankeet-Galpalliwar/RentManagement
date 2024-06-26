@@ -65,7 +65,6 @@ import com.cagl.dto.TenureDto;
 import com.cagl.dto.provisionDto;
 import com.cagl.dto.varianceDto;
 import com.cagl.entity.ApiCallRecords;
-import com.cagl.entity.ConfirmPaymentReport;
 import com.cagl.entity.IfscMaster;
 import com.cagl.entity.PaymentReport;
 import com.cagl.entity.RawPaymentReport;
@@ -94,6 +93,7 @@ import com.cagl.service.RentService;
  */
 @RestController
 @Component
+//@EnableSwagger2
 @CrossOrigin(origins = "*")
 public class RentController {
 
@@ -130,6 +130,7 @@ public class RentController {
 
 	@GetMapping("/AlertContract")
 	public ResponseEntity<Responce> getAlertContract() throws ParseException {
+//		System.out.println("AlertContract");
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentService.getAlertContract())
 				.error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
@@ -229,6 +230,7 @@ public class RentController {
 	 */
 	@GetMapping("/closecontract")
 	public int ChangeContractStatus(Authentication user, @RequestParam String contractId) {
+		System.out.println("closecontract");
 
 		if (rentContractRepository.findById(Integer.parseInt(contractId)).get().getRentEndDate()
 				.isAfter(LocalDate.now())) {
@@ -444,6 +446,7 @@ public class RentController {
 	@DeleteMapping("/deleteProvision")
 
 	public String deleteProvision(@RequestParam String contractID, @RequestParam int year, @RequestParam String month) {
+		System.out.println("deleteProvision");
 		try {
 			if (!(LocalDate.now().getMonth() + "").equalsIgnoreCase(month) && LocalDate.now().getYear() != year)
 				throw new RuntimeException("ALLOWED ONLY FOR CURRENT MONTH&YEAR");
@@ -514,6 +517,7 @@ public class RentController {
 	@GetMapping("/generatePaymentReport")
 	public ResponseEntity<Responce> generatePaymentReport(@RequestParam String contractID, @RequestParam String month,
 			@RequestParam String year, @RequestParam String purpose) {
+		System.out.println("generatePaymentReport");
 		Responce responce = rentService.getPaymentReport(contractID, month, year, purpose);
 		return ResponseEntity.status(HttpStatus.OK).body(responce);
 	}
@@ -524,6 +528,7 @@ public class RentController {
 	@GetMapping("/generateRawPaymentReport")
 	public ResponseEntity<Responce> generateRawPaymentReport(@RequestParam String contractID,
 			@RequestParam String month, @RequestParam String year) {
+		System.out.println("generateRawPaymentReport");
 		List<RawPaymentReport> data = rawPaymentReportRepository.findByMonthAndYear(month, year);
 		List<PaymentReportDto> prDto = new ArrayList<>();
 		if (data != null) {
@@ -655,24 +660,28 @@ public class RentController {
 
 	/**
 	 * @DropDown API
-	 * @param branchName & branch Type 
+	 * @param branchName & branch Type
 	 * @return BranchIds Base on Branch Name.
 	 */
-	@GetMapping("/getBranchsByBranchName")//2
-	public List<String> getbranchID(@RequestParam String branchName,@RequestParam String branchtype) {
-		return rentContractRepository.getbranchIDsByBranchName(branchName,branchtype);
+	@GetMapping("/getBranchsByBranchName") // 2
+	public List<String> getbranchID(@RequestParam String branchName, @RequestParam String branchtype) {
+		System.out.println("getBranchsByBranchName");
+		return rentContractRepository.getbranchIDsByBranchName(branchName, branchtype);
 	}
-	
-	@GetMapping("/getBranchType")//1
-	public List<String> getbranchType(@RequestParam String branchName){
+
+	@GetMapping("/getBranchType") // 1
+	public List<String> getbranchType(@RequestParam String branchName) {
+		System.out.println("getBranchType");
 		return rentContractRepository.getBranchTypeBaseOnBranchName(branchName);
-		
+
 	}
 
 	@GetMapping("/renewalDetails")
-	public ResponseEntity<Responce> getinfo(@RequestParam String branchID,@RequestParam String branchtype) {
+	public ResponseEntity<Responce> getinfo(@RequestParam String branchID, @RequestParam String branchtype) {
 
-		List<RentContract> contractData = rentContractRepository.findByBranchIDAndLesseeBranchType(branchID,branchtype);
+		System.out.println("renewalDetails" + branchID + branchtype);
+		List<RentContract> contractData = rentContractRepository.findByBranchIDAndLesseeBranchType(branchID,
+				branchtype);
 		if (contractData != null)
 			return ResponseEntity.status(HttpStatus.OK)
 					.body(Responce.builder().error(Boolean.FALSE)
@@ -780,7 +789,7 @@ public class RentController {
 		 */
 		apirecords.save(ApiCallRecords.builder().apiname("editcontracts")
 				.timeZone(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()))
-				.msg(contractDto.getUniqueID() + "/").build());
+				.msg(rentContract.getUniqueID() + "/").build());
 
 		boolean flagCheck = false; // its false don't calculate Due..!
 		if (!rentContract.getRentStartDate().toString().equalsIgnoreCase(contractDto.getRentStartDate().toString())
@@ -976,9 +985,7 @@ public class RentController {
 		if (contract != null) {
 			return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().error(Boolean.FALSE)
 					.msg("All Contracts Details fetch..!")
-					.data(contract.stream().filter(e->
-				         e.getContractZone().equalsIgnoreCase("Approved")
-					).map(e -> {
+					.data(contract.stream().filter(e -> e.getContractZone().equalsIgnoreCase("Approved")).map(e -> {
 						RentContractDto dto = new RentContractDto();
 						BeanUtils.copyProperties(e, dto);
 						return dto;

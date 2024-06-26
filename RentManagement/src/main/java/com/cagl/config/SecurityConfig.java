@@ -13,13 +13,16 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import com.cagl.Security.CustomeUserDetailService;
 import com.cagl.Security.JwtAuthenticationEntryPoint;
 import com.cagl.Security.JwtAutheticationFilter;
 
 @Configuration
+//@EnableSwagger2
 @EnableWebSecurity
+@CrossOrigin(origins = "*")
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
@@ -32,9 +35,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	@Autowired
 	CustomeUserDetailService customeUserDetailService;
 
+//	public Docket SwaggerApi() {
+//		// .paths(PathSelectors.any())
+//		return new Docket(DocumentationType.SWAGGER_2).select()
+//				.apis(RequestHandlerSelectors.basePackage("com.cagl.controller")).build();
+//	}
+
 	// Checker APIs
-	public static final String[] checkerApis = { "/makeDue", "/changeZone",
-			"/ModifyPaymentReport", "/transferContract" };
+	public static final String[] checkerApis = {"/makeDue","/changeZone", "/ModifyPaymentReport",
+			"/transferContract" };
 	// Maker APIs
 	public static final String[] makersApis = { "/setsd", "/makeactual", "/setprovision", "/deleteProvision",
 			"/insertcontract", "/ExtendContract" };// BulkProvisionDelete,
@@ -48,7 +57,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	public static final String[] permitAllAPIs = { "/DownloadPaymentReport", "/login", "/checkPcontract",
 			"/ConvertJsontoExcel", "/countvariance", "/getnewpendingcontract", "/getupdatpendingcontract",
 			"/getLastContract", "/getAllContractsByDistrict", "/getAllContractByState", "/getOpenContract",
-			"/getBranchsByBranchName", "/DashBoardDetails" ,"/getBranchType"};
+			"/getBranchsByBranchName", "/DashBoardDetails", "/getBranchType",
+
+			// Swagger
+//			"/swagger-ui/**", "/swagger-resources/**", "/v2/api-docs", "/webjars/**" 
+			
+	};
 
 	@Override
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {

@@ -338,7 +338,8 @@ public class RentServiceImpl implements RentService {
 		List<provision> ReversedprovisionData = provisionRepository
 				.findByContractIDAndYearAndMonthAndProvisiontypeAndPaymentFlag(contractID, Integer.parseInt(year),
 						month, "REVERSED", "PAID");
-		if (ReversedprovisionData == null & ReversedprovisionData.isEmpty()) {
+		System.out.println(ReversedprovisionData);
+		if (ReversedprovisionData == null || ReversedprovisionData.isEmpty()) {
 			// ............................................................
 			boolean flag = true;
 			try {
@@ -492,7 +493,6 @@ public class RentServiceImpl implements RentService {
 		});
 	}
 
-	// -----------------------------
 
 	/**
 	 * @API -> To Generate Payment Report
@@ -500,10 +500,6 @@ public class RentServiceImpl implements RentService {
 	 */
 	public PaymentReportDto generatePaymentreport(String contractID, String month, String year, String reportType) {
 
-//		System.out.println(contractID);
-//		System.out.println(month);
-//		System.out.println(year);
-//		System.out.println(reportType);
 
 		// check particular contract is applicable or not for payment report-> To avoid
 		// go inside...!
@@ -598,7 +594,7 @@ public class RentServiceImpl implements RentService {
 				if (Double.parseDouble(rentContract.getTds()) > 0)
 					tds = Math.round(((Double.parseDouble(rentContract.getTds().trim()) / 100.0f) * gross));
 			} catch (Exception e) {
-//				System.out.println("TDS ERROR");
+				System.out.println("TDS ERROR");
 			}
 
 			// ----------GST Value initiate-----------
@@ -606,7 +602,7 @@ public class RentServiceImpl implements RentService {
 				double gstpercent = Double.parseDouble(rentContract.getGst().trim());
 				Gst += Math.round(((gstpercent / 100.0f) * gross));
 			} catch (Exception e) {
-//				System.out.println("GST ERROR..!");
+				System.out.println("GST ERROR..!");
 			}
 
 			// ----------Net Value initiate-----------
@@ -650,7 +646,7 @@ public class RentServiceImpl implements RentService {
 						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
 						+ "' and end_date>='"
 						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "Start")
-						+ "' and year=2024;", String.class);
+						+ "' and year="+ priviousMonth.getYear()+";", String.class);
 		List<String> rentContract = jdbcTemplate1
 				.queryForList("SELECT distinct uniqueid FROM rent_contract where   rent_start_date<='"
 						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
@@ -772,9 +768,6 @@ public class RentServiceImpl implements RentService {
 	public DashBoardInfo getDashBoardDetails() {
 		LocalDate now = LocalDate.now();
 		LocalDate pre = now.minusMonths(1);
-		System.out.println("11111111111");
-		String grossSum = provisionRepository.getProvisionSum(now.getMonth().toString(), now.getYear(), "MAKE");
-		System.out.println("11111111111"+grossSum);
 
 		return DashBoardInfo.builder().grossCurrentMonth(now.getMonth().toString())
 				.grossCurrentMonthSum(
@@ -788,7 +781,7 @@ public class RentServiceImpl implements RentService {
 				.provisionPreviousMonth(pre.getMonth().toString())
 				.provisionPreviousMonthSum(
 						provisionRepository.getProvisionSum(pre.getMonth().toString(), pre.getYear(), "MAKE") + "")
-				.build();
+				.activeContract(rentContractRepository.getActiveContract()).build();
 
 	}
 

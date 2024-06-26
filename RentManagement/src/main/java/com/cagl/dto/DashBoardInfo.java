@@ -28,4 +28,7 @@ public class DashBoardInfo {
 	private String grossPreviousMonthSum;
 	private String grossCurrentMonth;
 	private String grossCurrentMonthSum;
+	
+//==================================================
+	private String activeContract;
 }

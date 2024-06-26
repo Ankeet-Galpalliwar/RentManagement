@@ -79,7 +79,7 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	@Query(value = "SELECT max(uniqueid) FROM rent_contract",nativeQuery = true)
 	int getMaxID();
 
-	@Query(value = "SELECT * FROM rentmanagement.rent_contract where contract_zone='pending' and uniqueid<:maxID",nativeQuery = true)
+	@Query(value = "SELECT * FROM rent_contract where contract_zone='pending' and uniqueid<:maxID",nativeQuery = true)
 	 List<RentContract> getalertcontract(@Param("maxID")int maxID);
 
 	@Query(value = "SELECT count(*)  FROM provision where year=:year",nativeQuery = true)
@@ -95,6 +95,9 @@ public interface RentContractRepository extends JpaRepository<RentContract, Inte
 	List<RentContract> findByPremesisDistrictAndContractZone(String state,String zone);
 
 	List<RentContract> findByBranchIDAndLesseeBranchType(String branchID, String branchtype);
+
+	@Query(value = "SELECT count(*) FROM rentmanagement.rent_contract where agreement_activation_status='Open'",nativeQuery = true)
+	String getActiveContract();
 
 
 
