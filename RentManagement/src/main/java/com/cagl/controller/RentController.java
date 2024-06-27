@@ -130,7 +130,6 @@ public class RentController {
 
 	@GetMapping("/AlertContract")
 	public ResponseEntity<Responce> getAlertContract() throws ParseException {
-//		System.out.println("AlertContract");
 		return ResponseEntity.status(HttpStatus.OK).body(Responce.builder().data(rentService.getAlertContract())
 				.error(Boolean.FALSE).msg("Alerts Contracts").build());
 	}
@@ -147,8 +146,10 @@ public class RentController {
 				.msg(contractID + "-" + user.getName()).build());
 
 		RentContract rentContract = rentContractRepository.findById(contractID).get();
-		String ExistingData = rentContract.getDocumentType();
-		rentContract.setDocumentType(ExistingData + "{Contract Extend(" + rentEndDate + ")} ");
+		if (rentContract.getDocumentType() != null)
+			rentContract.setDocumentType("{Contract Extend(" + rentEndDate + ")} ");
+		else
+			rentContract.setDocumentType(rentContract.getDocumentType() + "{Contract Extend(" + rentEndDate + ")} ");
 		rentContractRepository.save(rentContract);
 		return "{Contract Extend(" + rentEndDate + ")";
 	}
@@ -230,8 +231,6 @@ public class RentController {
 	 */
 	@GetMapping("/closecontract")
 	public int ChangeContractStatus(Authentication user, @RequestParam String contractId) {
-		System.out.println("closecontract");
-
 		if (rentContractRepository.findById(Integer.parseInt(contractId)).get().getRentEndDate()
 				.isAfter(LocalDate.now())) {
 			apirecords.save(ApiCallRecords.builder().apiname("closecontract")
@@ -371,13 +370,6 @@ public class RentController {
 	public ResponseEntity<Responce> makeActual(@RequestParam String Status,
 			@RequestBody List<MakeActualDto> ActualDto) {
 		if (Status.equalsIgnoreCase("CONFIRM")) {
-
-//			List<PaymentReport> Paymentdata = paymentReportRepository.findByMonthAndYear(ActualDto.get(0).getMonth(),
-//					ActualDto.get(0).getYear() + "");
-//			Paymentdata.stream().forEach(e->{
-//				ConfirmPaymentReport.builder().ActualAmount(e.getActualAmount()).branchID(e.getBranchID()).contractID(e.getContractID()+"").due(e.getDue()).Gross(e.getGross()).GST(e.getGST()).ID(null).month(e.getMonth()).year(e.getYear()).
-//				confirmPaymentRepository.save(null);			
-//			});
 			return null;
 		}
 		Map<String, String> responce = rentService.makeactual(Status, ActualDto);
@@ -405,12 +397,14 @@ public class RentController {
 	public ResponseEntity<Responce> addprovison(Authentication authentication, @RequestParam String provisionType,
 			@RequestBody provisionDto provisionDto) throws ParseException {
 		/**
-		 * As per new Requirement(IN PROD) Same month multiple provision required(for
-		 * unique (currentDate We are using at end of primary_Key)
-		 * 
-		 * @BUT WE can't make 2 provision reversed with different
-		 *      payment_flag(PAID_or_NOT PAID)
+		 * As per new Requirement(IN PROD) Same month multiple provision required
+		 *
+		 * @Case1 only current month provision allowed
+		 * @Case2 BUT WE can't make 2 provision reversed with different
+		 *        payment_flag(PAID_or_NOT PAID) any one payment_flag we have to use for
+		 *        same month
 		 */
+		// @Case1
 		if (provisionType.equalsIgnoreCase("REVERSED")) {
 			String ExistPaymentFlag = provisionRepository.getReversedProvisionPaymentFlag(
 					provisionDto.getContractID() + "-" + provisionDto.getMonth() + "-" + provisionDto.getYear());
@@ -420,6 +414,18 @@ public class RentController {
 								.msg("SAME_MONTH_YOU CANT MAKE BOTH").build());
 			}
 		}
+		// @case2
+		try {
+			LocalDate now = LocalDate.now();
+			LocalDate flagDate = RentController.getFlagDate(provisionDto.getMonth(), provisionDto.getYear(), "start");
+			if (flagDate.getMonth() == now.getMonth() & flagDate.getYear() == now.getYear()) {
+			} else
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Responce.builder()
+						.data("CAN'T MAKE PROVISION").error(Boolean.TRUE).msg("ONLY CURRENT MONTH ALLOWED!").build());
+		} catch (ParseException e1) {
+			return null;
+		}
+		// ----------------
 		provisionDto.setMakerID(authentication.getName());
 		provisionDto.setMakerTimeZone(LocalDate.now().toString());
 		rentService.addprovision(provisionType, provisionDto);

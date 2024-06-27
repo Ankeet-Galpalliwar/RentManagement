@@ -35,7 +35,7 @@ public interface provisionRepository extends JpaRepository<provision, String> {
 	@Query(value = "SELECT provisionid FROM provision where provisionid like %:like%", nativeQuery = true)
 	List<String> getSimilarIDs(@Param("like") String like);
 
-	@Query(value = "select distinct payment_flag from rentmanagement.provision where provisionid like %:like% and provisiontype='Reversed'", nativeQuery = true)
+	@Query(value = "select distinct payment_flag from provision where provisionid like %:like% and provisiontype='Reversed'", nativeQuery = true)
 	String getReversedProvisionPaymentFlag(@Param("like") String like);
 
 	@Query(value = "SELECT sum(provision_amount)  FROM rentmanagement.provision where month=:m and year=:y and  provisiontype=:type", nativeQuery = true)

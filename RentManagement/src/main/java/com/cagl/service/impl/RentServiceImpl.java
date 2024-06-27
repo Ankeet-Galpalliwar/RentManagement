@@ -147,37 +147,18 @@ public class RentServiceImpl implements RentService {
 			// Get on by one Actual Data
 			LocalDate now = LocalDate.now();
 			actualDto.stream().filter(e -> {
-				boolean pCondition = false;//
 				LocalDate flagDate = null;
 				try {
 					flagDate = RentController.getFlagDate(e.getMonth(), e.getYear(), "start");
 				} catch (ParseException e1) {
+					return false;
 				}
 
-				// ====Get Previous Month Value =======
-				/**
-				 * @check ->IF previous Month Actual not done then not allowed to make Actual(If
-				 *        rent_start Date then allowed.
-				 */
-//				String Pmonth = flagDate.minusMonths(1).getMonth().toString();
-//				int Pyear = flagDate.minusMonths(1).getYear();
-//				List<String> getvalue = getvalue("SELECT " + Pmonth + " FROM rent_actual where year=" + Pyear
-//						+ " and contractid=" + e.getContractID() + "");
-//				if (((getvalue.isEmpty() || getvalue == null))) {
-//					if (!(((e.getStartDate().getMonth().toString()).equalsIgnoreCase(e.getMonth()))
-//							& (e.getStartDate().getYear() == e.getYear()))) {
-//					
-//						pCondition = true;
-//					}
-//				} else if (getvalue.get(0).equalsIgnoreCase("--")) {
-//					pCondition = true;
-//				}
-
-				if (flagDate.isAfter(now) || pCondition) {
-					responce.put("--", e.getContractID() + "NOT PAID Not Eligible");
-					return false;
-				} else {
+				if (flagDate.getMonth() == now.getMonth() & flagDate.getYear() == now.getYear()) {
 					return true;
+				} else {
+					responce.put("--", e.getContractID() + " NOT PAID");
+					return false;
 				}
 			}).forEach(Data -> {
 				String ID = Data.getContractID() + "-" + Data.getYear();
@@ -231,7 +212,6 @@ public class RentServiceImpl implements RentService {
 									+ " where rent_tdsid='" + ID + "'";
 							jdbcTemplate1.update(tdsQuery);
 						}
-
 						String actualQuery = "update rent_actual set " + Data.getMonth() + "='" + Data.getAmount()
 								+ "' where rent_actualid='" + ID + "'";
 						int actualQueryResponce = jdbcTemplate1.update(actualQuery);
@@ -333,6 +313,7 @@ public class RentServiceImpl implements RentService {
 				.GST(Double.parseDouble(rawgeneratereport.getGstamt())).year(year).build());
 		/**
 		 * Additional Requirement
+		 * IF any reversed provision Paid in middle then Current month provision also Add in Report.
 		 */
 
 		List<provision> ReversedprovisionData = provisionRepository
@@ -411,14 +392,12 @@ public class RentServiceImpl implements RentService {
 		try {
 			provision.setFlag(RentController.getFlagDate(provisionDto.getMonth(), provisionDto.getYear(), "start"));
 		} catch (Exception e) {
-			System.out.println(e);
 		} // setting some Date base on Month&Year
 		provision save = provisionRepository.save(provision);
 		if (save != null) {
 //-----Modify already Exist Data with new Actual Amount(Base on updated Gross)------
 			PaymentReportDto generatePaymentreport = generatePaymentreport(provisionDto.getContractID(),
 					provisionDto.getMonth(), provisionDto.getYear() + "", "RAW");
-			System.out.println(provisionDto.getContractID() + provisionDto.getMonth() + provisionDto.getYear());
 			ArrayList<MakeActualDto> actualDto = new ArrayList<>();
 			actualDto.add(MakeActualDto.builder().branchID(generatePaymentreport.getInfo().getBranchID())
 					.contractID(generatePaymentreport.getInfo().getUniqueID())
@@ -427,10 +406,8 @@ public class RentServiceImpl implements RentService {
 					.tdsAmount(Double.parseDouble(generatePaymentreport.getReporttds()))
 					.startDate(generatePaymentreport.getInfo().getRentStartDate()).year(provisionDto.getYear())
 					.build());
-			Map<String, String> makeactual = makeactual("NOTCONFIRM", actualDto);
+			makeactual("NOTCONFIRM", actualDto);// make Actual with updated Gross Value
 		}
-//		BeanUtils.copyProperties(save, provisionDto);
-//		return provisionDto;
 	}
 
 	@Override
@@ -493,13 +470,11 @@ public class RentServiceImpl implements RentService {
 		});
 	}
 
-
 	/**
 	 * @API -> To Generate Payment Report
 	 * @return Report DtoObject.
 	 */
 	public PaymentReportDto generatePaymentreport(String contractID, String month, String year, String reportType) {
-
 
 		// check particular contract is applicable or not for payment report-> To avoid
 		// go inside...!
@@ -646,7 +621,7 @@ public class RentServiceImpl implements RentService {
 						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
 						+ "' and end_date>='"
 						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "Start")
-						+ "' and year="+ priviousMonth.getYear()+";", String.class);
+						+ "' and year=" + priviousMonth.getYear() + ";", String.class);
 		List<String> rentContract = jdbcTemplate1
 				.queryForList("SELECT distinct uniqueid FROM rent_contract where   rent_start_date<='"
 						+ RentController.getFlagDate(priviousMonth.getMonth() + "", priviousMonth.getYear(), "End")
